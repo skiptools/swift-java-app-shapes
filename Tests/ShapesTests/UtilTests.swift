@@ -6,6 +6,7 @@ import ShapesUtil
 struct UtilTests {
   @Test func formatting() {
     #expect(Formatting.defaultPrecision == 2)
+    #expect(Formatting.separators == [", ", " · "])
     #expect(Formatting.percent(0.5) == "50%")
     #expect(Formatting.percent(0.1234, precision: 1) == "12.3%")
     #expect(Formatting.dateFormatter().dateStyle == .medium)

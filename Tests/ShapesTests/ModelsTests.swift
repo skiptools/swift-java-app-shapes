@@ -91,6 +91,10 @@ struct ModelsTests {
       return
     }
     #expect(text == "hi")
+    guard case .closed(1000, "bye") = Message.goodbye else {
+      Issue.record("goodbye isn't closed")
+      return
+    }
     guard case .closed(let code, let reason) = Message.closed(code: 1000, reason: nil) else {
       Issue.record("expected .closed")
       return
@@ -120,6 +124,7 @@ struct ModelsTests {
     #expect(TextCover(title: "T").title == "T")
     #expect(Cover(image: ImageCover(url: url)).summary == "image https://example.com/c.png")
     #expect(Cover(text: TextCover(title: "T")).summary == "text T")
+    #expect(Cover.placeholderTitle == "Untitled")
   }
 
   @Test func naming() {

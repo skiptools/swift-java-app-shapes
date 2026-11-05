@@ -5,6 +5,9 @@ public enum Formatting {
   /// Shape: no type annotation, inferred from the literal.
   public static let defaultPrecision = 2
 
+  /// Shape: no type annotation, an array literal inferred from its elements.
+  public static let separators = [", ", " · "]
+
   public static func percent(_ value: Double, precision: Int64 = 0) -> String {
     String(format: "%.\(precision)f%%", value * 100)
   }

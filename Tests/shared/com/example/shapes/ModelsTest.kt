@@ -68,6 +68,8 @@ class ModelsTest {
         assertEquals(10, range.long)
         assertEquals(7, range.wait_())
         assertEquals(2, Formatting.getDefaultPrecision())
+        assertEquals(listOf(", ", " · "), Formatting.getSeparators().toList())
+        assertEquals("Untitled", Cover.getPlaceholderTitle())
         assertEquals("50%", Formatting.percent(0.5))
         assertEquals("shown", Formatting.describe({ "shown" }, true))
     }
@@ -91,6 +93,7 @@ class ModelsTest {
         assertEquals("hello", describe(Message.string("hello")))
         assertEquals("closed 1000 bye", describe(Message.closed(1000, "bye")))
         assertEquals("closed 1001 -", describe(Message.closed(1001, null)))
+        assertEquals("closed 1000 bye", describe(Message.getGoodbye()))
     }
 
     @Test

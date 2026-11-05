@@ -14,6 +14,9 @@ public struct Cover: Sendable {
   public init(text: TextCover) {
     summary = "text \(text.title)"
   }
+
+  /// Shape: no type annotation, a property read off a new value.
+  public static let placeholderTitle = TextCover(title: "Untitled").title
 }
 
 @JavaExport
