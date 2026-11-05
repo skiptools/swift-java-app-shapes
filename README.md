@@ -34,10 +34,10 @@ swift-java/              skiptools/swift-java at skip/integration (submodule)
 | Module | `exportMode` | Shapes |
 |---|---|---|
 | `ShapesUtil` | `all` | static helpers, constants inferred from literals, `@autoclosure` arguments, Java keywords as names, a method named like `Object.wait()`, platform-specific API |
-| `ShapesModels` | `annotated` | Codable entities with Foundation values, raw-value enums, enums with payloads (one carrying an `Error`, one whose case shadows a payload type), nested arrays, sets, optional labeled tuples, overloads that differ only in pointer types, clashing accessor names, a default-argument overload that would be ambiguous, a parameter named `result`, a `@MainActor` callback typealias |
-| `ShapesClients` | `annotated` | client protocols used as bare existentials, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure, an extension of another module's type, dictionaries and sets of another module's types, Combine state |
+| `ShapesModels` | `annotated` | Codable entities with Foundation values, raw-value enums, enums with payloads (one carrying an `Error`, one whose case shadows a payload type, one a closure), nested arrays, sets, optional labeled tuples, overloads that differ only in pointer types, clashing accessor names, a default-argument overload that would be ambiguous, a parameter named `result`, a `@MainActor` callback typealias |
+| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure, an extension of another module's type, dictionaries and sets of another module's types, Combine state |
 | `ShapesDependencies` | `all` | a container of clients typed as another module's protocols, `@autoclosure @escaping` configuration returning another module's enum, app state, async functions taking entities |
-| `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, async callbacks returning futures |
+| `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, async callbacks returning futures, a closure returning an optional array of entities |
 
 Every module sets `failOnSkippedDeclarations`, so building with jextract fails when it can't handle
 something. Shapes it doesn't handle yet are marked `@JavaExport(false)` with a `// Gap:` comment (below).
@@ -89,12 +89,10 @@ build and the Kotlin tests then check.
 - `#if`: without a static build configuration jextract treats every platform as active, so a macOS
   build gets thunks for `#if os(Android)` API (`Platform.androidOnly()`,
   `ShelfViewModel.androidBackPressed()`), and it treats `canImport(_:)` as false.
-- Generic classes used with type arguments (`StateValue<Int64>`).
-- Closures returning a protocol type (`CatalogClient.makeSearch()`).
-- Closures taking or returning optional arrays (`ShelfViewModel.setSeedProvider(_:)`).
+- Closures returning a protocol Kotlin implements (`LifecycleObserverFactory.init(makeObserver:)`):
+  Kotlin implementations of Swift protocols need `enableJavaCallbacks`, which runs Gradle, javac and
+  wrap-java inside the SwiftPM build.
 - Optional arrays of primitives as parameters (`Shelf.withPageCounts(_:)`; they work as results).
-- Enum cases with closure payloads over jextracted types (`SortPolicy`); a single case can't be left out
-  either.
 - An extension of another module's type (`extension Book` in `ShapesClients`) becomes a separate Java
   class, `com.example.shapes.clients.Book`, rather than members Kotlin can call on a
   `com.example.shapes.models.Book`: Kotlin reaches it only by wrapping the entity's address.

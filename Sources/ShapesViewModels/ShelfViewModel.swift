@@ -39,6 +39,7 @@ public final class ShelfViewModel {
 
   @ObservationIgnored private let dependencies: Dependencies
   @ObservationIgnored private let callbacks: Callbacks
+  @ObservationIgnored private var seedProvider: ((String) -> [Book]?)?
   public private(set) var books: [Book] = []
   public private(set) var isLoading = false
 
@@ -77,9 +78,14 @@ public final class ShelfViewModel {
   }
 
   /// Shape: a seed provider returning an optional array of entities.
-  /// Gap: closures taking or returning optional arrays aren't supported yet.
-  @JavaExport(false)
-  public func setSeedProvider(_ provider: @escaping (String) -> [Book]?) {}
+  public func setSeedProvider(_ provider: @escaping (String) -> [Book]?) {
+    seedProvider = provider
+  }
+
+  /// Shows the provider's books for `query` until a load replaces them; none when it has none.
+  public func seed(query: String) {
+    books = seedProvider?(query) ?? []
+  }
 
   #if os(Android)
     /// Shape: Android-only API on a view model.

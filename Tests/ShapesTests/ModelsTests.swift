@@ -104,6 +104,8 @@ struct ModelsTests {
       Issue.record("expected .byTitle")
       return
     }
+    #expect(SortPolicy.byTitle.areInIncreasingOrder(books[1], books[0]))
+    #expect(SortPolicy.custom { $0.id > $1.id }.areInIncreasingOrder(books[1], books[0]))
   }
 
   @Test func covers() throws {

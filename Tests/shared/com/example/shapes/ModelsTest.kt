@@ -10,6 +10,7 @@ import com.example.shapes.models.Quantity
 import com.example.shapes.models.Rating
 import com.example.shapes.models.Review
 import com.example.shapes.models.Shelf
+import com.example.shapes.models.SortPolicy
 import com.example.shapes.models.ShelfID
 import com.example.shapes.models.TextCover
 import com.example.shapes.util.Formatting
@@ -156,5 +157,20 @@ class ModelsTest {
         assertEquals(3, Range64.init(10, 3).short)
         // ART reports itself as Dalvik.
         assertEquals(if (System.getProperty("java.vm.name") == "Dalvik") "android" else "apple", Platform.name())
+    }
+
+    @Test
+    fun enumCaseWithAClosurePayload() {
+        val byId = SortPolicy.custom { lhs: Book, rhs: Book -> lhs.id > rhs.id }
+        val a = Book.init("1", "B")
+        val b = Book.init("2", "A")
+        assertTrue(byId.areInIncreasingOrder(b, a))
+        assertIs<SortPolicy.Case.Custom>(byId.case)
+        assertTrue(byId.getAsCustom().isPresent)
+        assertEquals(SortPolicy.Discriminator.CUSTOM, byId.discriminator)
+
+        val byTitle = SortPolicy.byTitle()
+        assertTrue(byTitle.areInIncreasingOrder(b, a))
+        assertIs<SortPolicy.Case.ByTitle>(byTitle.case)
     }
 }

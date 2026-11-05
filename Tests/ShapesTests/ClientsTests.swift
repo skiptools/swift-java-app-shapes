@@ -29,15 +29,24 @@ struct ClientsTests {
     await #expect(throws: LibraryError.self) { try await client.search(query: "") }
   }
 
-  @Test func catalog() async throws {
+  @Test func catalog() {
     let shelf = Shelf(id: ShelfID("main"), books: books)
     let catalog = CatalogClient(shelves: [shelf])
     #expect(catalog.ids() == [ShelfID("main")])
     #expect(catalog.all()[ShelfID("main")]?.books == books)
+  }
 
-    let search = catalog.makeSearch()()
-    #expect(search.id == "catalog")
-    #expect(try await search.search(query: "story").map(\.id) == ["2"])
+  @Test func lifecycleObserverFactory() {
+    final class Observer: LifecycleObserver {
+      let disposed: Counter
+      init(disposed: Counter) { self.disposed = disposed }
+      func dispose() { disposed.increment() }
+    }
+    let disposed = Counter()
+    let factory = LifecycleObserverFactory { _ in Observer(disposed: disposed) }
+    factory.observeOnce(id: "a")
+    factory.observeOnce(id: "b")
+    #expect(disposed.value == 2)
   }
 
   @Test func notifications() {

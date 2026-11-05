@@ -19,12 +19,4 @@ public struct CatalogClient: Sendable {
   public func ids() -> Set<ShelfID> {
     Set(shelves.keys)
   }
-
-  /// Shape: a protocol, of another module, returned by a closure.
-  /// Gap: closures returning `any P` aren't supported yet.
-  @JavaExport(false)
-  public func makeSearch() -> () -> any SearchClient {
-    let books = shelves.values.flatMap(\.books)
-    return { SearchClientMock(id: "catalog", books: books) }
-  }
 }

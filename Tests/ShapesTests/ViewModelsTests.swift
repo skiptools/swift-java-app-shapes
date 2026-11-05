@@ -55,7 +55,11 @@ struct ViewModelsTests {
     await model.share(genre: .science)
     await model.setIcon("dark")
     await model.setIcon(nil)
-    model.setSeedProvider { _ in nil }
+    model.setSeedProvider { query in query == "seeded" ? [Book(id: "9", title: "Seeded")] : nil }
+    model.seed(query: "seeded")
+    #expect(model.books.map(\.title) == ["Seeded"])
+    model.seed(query: "other")
+    #expect(model.books.isEmpty)
     #if os(Android)
       model.androidBackPressed()
     #endif

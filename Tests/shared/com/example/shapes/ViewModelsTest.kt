@@ -120,4 +120,16 @@ class ViewModelsTest {
         assertEquals(false, vm.isLoading)
         assertEquals(0, vm.books.size)
     }
+
+    @Test
+    fun seedProviderReturningAnOptionalArray() = onMainThread {
+        val vm = ShelfViewModel.init(Dependencies.preview(), ShelfViewModel.Callbacks.init())
+        vm.setSeedProvider { query: String ->
+            if (query == "seeded") Optional.of(arrayOf(Book.init("9", "Seeded"))) else Optional.empty()
+        }
+        vm.seed("seeded")
+        assertEquals(listOf("Seeded"), vm.books.map { it.title })
+        vm.seed("other")
+        assertEquals(0, vm.books.size)
+    }
 }

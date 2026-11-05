@@ -4,8 +4,7 @@ import ShapesModels
 import ShapesUtil
 import SwiftJavaAnnotations
 
-/// Shape: a generic wrapper for persisted values.
-/// Gap: generic classes used with type arguments (`StateValue<Int64>`) aren't supported yet.
+/// Shape: a generic wrapper for persisted values, used only from Swift.
 @JavaExport(false)
 public final class StateValue<Value: Sendable>: @unchecked Sendable {
   public var value: Value
