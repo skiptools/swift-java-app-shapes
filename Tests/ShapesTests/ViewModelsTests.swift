@@ -80,6 +80,19 @@ struct ViewModelsTests {
     await model.setIcon(nil)
   }
 
+  @Test func pickerHandedAClosure() {
+    let model = ShelfViewModel(dependencies: .preview(), callbacks: .init())
+    var onPicked: (@MainActor (String) -> Void)?
+    model.pickBook { titles, selected, picked in
+      #expect(titles.isEmpty)
+      #expect(selected == nil)
+      onPicked = picked
+    }
+    #expect(model.picked == nil)
+    onPicked?("Cosmos")
+    #expect(model.picked == "Cosmos")
+  }
+
   @Test func mainLoop() {
     MainLoop.run(seconds: 0.01)
   }

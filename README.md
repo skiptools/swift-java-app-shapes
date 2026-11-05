@@ -57,7 +57,7 @@ swift-java/              skiptools/swift-java at skip/integration (submodule)
 | `ShapesModels` | `annotated` | Codable entities with Foundation values, raw-value enums, enums with payloads (one carrying an `Error`, one whose case shadows a payload type, one a closure), nested arrays, sets, optional labeled tuples, overloads that differ only in pointer types, clashing accessor names, a default-argument overload that would be ambiguous, a parameter named `result`, a `@MainActor` callback typealias |
 | `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure, an extension of another module's type, dictionaries and sets of another module's types, Combine state, an `AsyncStream`, a long-running `async` function that stops when cancelled |
 | `ShapesDependencies` | `all` | a container of clients typed as another module's protocols, `@autoclosure @escaping` configuration returning another module's enum, app state, async functions taking entities |
-| `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, `async` callbacks (suspend lambdas in Kotlin), a closure returning an optional array of entities |
+| `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, `async` callbacks (suspend lambdas in Kotlin), a closure returning an optional array of entities, a callback handed a Swift closure to call later |
 
 Every module sets `failOnSkippedDeclarations`, so building with jextract fails when it can't handle
 something. Shapes it doesn't handle yet are marked `@JavaExport(false)` with a `// Gap:` comment
@@ -224,6 +224,7 @@ package, and against the app it comes from (no new skipped declarations, javac o
 | 39 | swift-java's Gradle scripts without APIs Gradle deprecates | [`gradle-deprecations`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:gradle-deprecations) | upstream `main` |  |
 | 40 | Optional arrays as parameters, setters and initializer arguments included | [`jextract-optional-array-parameters`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-optional-array-parameters) | upstream `main` |  |
 | 41 | `Self` results of structs, enums and classes | [`jextract-self-results`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-self-results) | upstream `main` |  |
+| 42 | Closure types keep their parameters' names; a closure implemented in Java can take a Swift closure | [`jextract-closure-closure-parameters`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-closure-parameters) | `skip/integration` |  |
 
 `skip/integration` also has, beyond these branches (see [Gaps and limits](#gaps-and-limits)):
 - the change of [#938](https://github.com/swiftlang/swift-java/pull/938) (`@MainActor` isolation in synchronous thunks), closed upstream;
@@ -267,9 +268,11 @@ removing its annotation, which the build and the Kotlin tests then check.
   functions get no Kotlin wrapper (Kotlin can't add static members to a Java class).
 - `@MainActor` work: a `suspend` call on Android's main dispatcher lets the main looper run it; the JVM
   tests' `runMain` is a main dispatcher that runs Swift's main loop.
+- Default-argument overloads that would be ambiguous with the `SwiftArena` ones are left out, so which arities
+  a function with trailing defaulted closures gets changes when it gains one (`ShelfViewModel.Callbacks.init`).
 - Out of scope: Observation to Compose state (Skip's), and arrays as `List`s.
 
 **The path upstream:** a few changes aren't yet on a branch based on upstream `main`. `jextract-kotlin-output`
-is based on `skip/integration`, the `Integration: …` commits combine several branches, and #938's change is
+and `jextract-closure-closure-parameters` are based on `skip/integration`, the `Integration: …` commits combine several branches, and #938's change is
 closed upstream. Splitting them into branches like the others makes `skip/integration` exactly upstream plus
 the list above.

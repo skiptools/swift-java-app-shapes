@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlinx.coroutines.CoroutineDispatcher
@@ -152,5 +153,22 @@ class ViewModelsTest {
         assertEquals(listOf("Seeded"), vm.books.map { it.title })
         vm.seed("other")
         assertEquals(0, vm.books.size)
+    }
+
+    @Test
+    fun callbackHandedASwiftClosure() = onMainThread {
+        val vm = ShelfViewModel.init(Dependencies.preview(), ShelfViewModel.Callbacks.init())
+        vm.seed("any")
+        var shown: List<String>? = null
+        var onPicked: ShelfViewModel.pickBook.present.onPicked? = null
+        vm.pickBook { titles, selected, picked ->
+            shown = titles.toList()
+            assertNull(selected)
+            onPicked = picked  // kept, and called later, as a picker does
+        }
+        assertEquals(emptyList(), shown)
+        assertNull(vm.picked)
+        onPicked!!.invoke("Cosmos")
+        assertEquals("Cosmos", vm.picked)
     }
 }

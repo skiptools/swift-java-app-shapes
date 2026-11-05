@@ -42,6 +42,8 @@ public final class ShelfViewModel {
   @ObservationIgnored private var seedProvider: ((String) -> [Book]?)?
   public private(set) var books: [Book] = []
   public private(set) var isLoading = false
+  /// The title last picked with `pickBook(present:)`.
+  public private(set) var picked: String?
 
   public init(dependencies: Dependencies, callbacks: Callbacks) {
     self.dependencies = dependencies
@@ -75,6 +77,16 @@ public final class ShelfViewModel {
 
   public func setIcon(_ name: String?) async {
     await callbacks.onSetIcon(name)
+  }
+
+  /// Shape: a callback handed a Swift closure that Kotlin calls later, as a picker does with the choice.
+  public func pickBook(
+    present: @escaping @MainActor (_ titles: [String], _ selected: String?, _ onPicked: @escaping @MainActor (String) -> Void)
+      -> Void
+  ) {
+    present(books.map(\.title), picked) { [weak self] title in
+      self?.picked = title
+    }
   }
 
   /// Shape: a seed provider returning an optional array of entities.
