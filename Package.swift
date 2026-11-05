@@ -68,5 +68,15 @@ let package = Package(
     module(
       "ShapesViewModels",
       dependencies: ["ShapesDependencies", "ShapesClients", "ShapesModels", "ShapesUtil"]),
+    // The Swift API, all of it: what Kotlin sees through the bindings (Tests/shared) and what it doesn't.
+    .testTarget(
+      name: "ShapesTests",
+      dependencies: [
+        "ShapesUtil", "ShapesModels", "ShapesClients", "ShapesDependencies", "ShapesViewModels",
+        .product(
+          name: "OpenCombine", package: "OpenCombine",
+          condition: .when(platforms: [.android, .linux])),
+      ]
+    ),
   ]
 )

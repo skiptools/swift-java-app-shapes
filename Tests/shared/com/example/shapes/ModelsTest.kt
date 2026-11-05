@@ -15,6 +15,10 @@ import com.example.shapes.models.TextCover
 import com.example.shapes.util.Formatting
 import com.example.shapes.util.Range64
 import java.net.URI
+import com.example.shapes.models.Genre
+import com.example.shapes.models.Scheme
+import com.example.shapes.util.Platform
+import kotlin.test.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -77,5 +81,80 @@ class ModelsTest {
         val closed = Message.closed(1000, "bye").getAsClosed()!!.get()
         assertEquals(1000, closed.code)
         assertEquals("bye", closed.reason.get())
+    }
+
+    @Test
+    fun everyEntityField() {
+        val url = URI("https://example.com/c.png")
+        val book = Book.init("1", "Cosmos", 300, Genre.science, url)
+        assertEquals("1", book.id)
+        assertEquals(300, book.pages)
+        assertEquals(Genre.science, book.genre)
+        assertEquals(url, book.coverURL)
+        assertEquals(0, book.published.time)
+        assertEquals(Genre.history, Book.init("2", "History", 120, Genre.history).genre)
+        val defaults = Book.init("3", "Defaults")
+        assertEquals(100, defaults.pages)
+        assertEquals(Genre.fiction, defaults.genre)
+        assertEquals("0", Book.getDefault().id)
+        assertNull(Book.init("4", "Empty", 0).pageRange)
+    }
+
+    @Test
+    fun payloadlessEnumsAreJavaEnums() {
+        assertEquals(listOf("fiction", "history", "science"), Genre.entries.map { it.name })
+        assertEquals(Genre.Discriminator.SCIENCE, Genre.science().discriminator)
+        assertTrue(Genre.fiction.getAsFiction().isPresent)
+        assertTrue(Genre.history.getAsHistory().isPresent)
+        assertTrue(Genre.science.getAsScience().isPresent)
+        assertIs<Genre.Case.Fiction>(Genre.fiction.case)
+        assertEquals(listOf("debug", "release"), Scheme.entries.map { it.name })
+        assertTrue(Scheme.debug().getAsDebug().isPresent)
+        assertTrue(Scheme.release.getAsRelease().isPresent)
+        assertIs<Scheme.Case.Release>(Scheme.release.case)
+    }
+
+    @Test
+    fun collectionsOfEntities() {
+        val shelf = Shelf.init(ShelfID.init("s"), arrayOf(Book.init("1", "One")))
+        assertEquals("s", shelf.id.rawValue)
+        assertEquals(0, shelf.tags.size)
+        assertNull(shelf.pageCounts)
+    }
+
+    @Test
+    fun valueAccessorsAndSetters() {
+        val url = URI("https://example.com/c.png")
+        assertEquals(url, ImageCover.init(url).url)
+        assertEquals("Title", TextCover.init("Title").title)
+        val availability = Availability.init(false, "Now")
+        assertEquals(false, availability.isLive)
+        availability.title = "Later"
+        assertEquals("Later", availability.title)
+        assertEquals(5, Rating.init(5).stars)
+        assertEquals(0.0, Quantity.init(0.0).value)
+        assertEquals("0: none", Review.init(null, "none").summary)
+    }
+
+    @Test
+    fun everyEnumCase() {
+        val offline = LibraryError.offline()
+        assertEquals(LibraryError.Discriminator.OFFLINE, offline.discriminator)
+        assertTrue(offline.getAsOffline().isPresent)
+        assertIs<LibraryError.Case.NotFound>(LibraryError.notFound("x").case)
+
+        val closed = Message.closed(1001, null).getAsClosed()!!.get()
+        assertEquals(1001, closed.code)
+        assertTrue(closed.reason.isEmpty)
+        assertIs<Message.Case.String>(Message.string("hi").case)
+    }
+
+    @Test
+    fun staticHelpers() {
+        assertEquals("12.3%", Formatting.percent(0.1234, 1))
+        assertEquals("", Formatting.describe({ error("not evaluated") }, false))
+        assertEquals(3, Range64.init(10, 3).short)
+        // ART reports itself as Dalvik.
+        assertEquals(if (System.getProperty("java.vm.name") == "Dalvik") "android" else "apple", Platform.name())
     }
 }

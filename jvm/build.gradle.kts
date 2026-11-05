@@ -18,6 +18,7 @@ val swiftBuild = tasks.register<Exec>("swiftBuild") {
     commandLine("swift", "build", "--disable-experimental-prebuilts", "--disable-sandbox")
     inputs.dir(packageDir.resolve("Sources"))
     inputs.file(packageDir.resolve("Package.swift"))
+    inputs.dir(packageDir.resolve("swift-java/Sources"))
     outputs.dirs(modules.map { generatedJava(it) })
 }
 

@@ -10,17 +10,21 @@ the UI. It uses swift-java from [skiptools/swift-java](https://github.com/skipto
 `skip/integration` branch (the `swift-java` submodule): upstream swift-java plus the changes proposed to
 it, which this package needs.
 
-|  | Builds | Kotlin tests |
+|  | Builds | Tests |
 |---|---|---|
 | iOS | `xcodebuild`, without swift-java | — |
-| macOS | `swift build`, with jextract | `./gradlew :jvm:test` (JVM) |
-| Android | cross-compiled with the Swift SDK for Android | `scripts/android-tests.sh` (emulator) |
+| macOS | `swift build`, with or without jextract | `swift test` (Swift), `./gradlew :jvm:test` (Kotlin on the JVM) |
+| Android | cross-compiled with the Swift SDK for Android | `scripts/android-tests.sh` (Kotlin on an emulator) |
+
+`Tests/ShapesTests` exercises all of the Swift API, exported or not; the Kotlin tests exercise all of
+what the bindings export.
 
 ## Layout
 
 ```
 Package.swift            five Swift 6 modules, linked into one library (ShapesApp)
 Sources/<Module>/        about 20 source files, and each module's swift-java.config
+Tests/ShapesTests/       the Swift tests
 Tests/shared/            the Kotlin tests, the same on the JVM and on Android
 Tests/jvm, Tests/android how each platform runs code on the main thread
 jvm/, android/           the Gradle projects that build the package and run the tests
@@ -42,6 +46,7 @@ something. Shapes it doesn't handle yet are marked `@JavaExport(false)` with a `
 
 ```bash
 git clone --recurse-submodules https://github.com/skiptools/swift-java-app-shapes.git
+swift test                          # Swift tests (SWIFT_JAVA_BUILD=1 swift test: with jextract)
 ./gradlew :jvm:test                 # macOS: Kotlin tests on the JVM (builds the package with jextract)
 xcodebuild -scheme swift-java-app-shapes -destination 'generic/platform=iOS Simulator' build
 scripts/android-tests.sh            # Kotlin tests on an Android emulator
@@ -92,4 +97,8 @@ build and the Kotlin tests then check.
   either.
 - An extension of another module's type (`extension Book` in `ShapesClients`) becomes a separate Java
   class, `com.example.shapes.clients.Book`, rather than members Kotlin can call on a
-  `com.example.shapes.models.Book`.
+  `com.example.shapes.models.Book`: Kotlin reaches it only by wrapping the entity's address.
+- Sets as parameters (`Shelf.init(id:books:tags:)`): Kotlin can't create a `SwiftSet`, so it can pass only
+  a set Swift returned.
+
+The tests mark where they work around a gap with a `// Gap:` comment.

@@ -7,7 +7,7 @@ on:
 
 jobs:
   macos:
-    name: Kotlin tests on the JVM, and the iOS build
+    name: Swift tests, Kotlin tests on the JVM, and the iOS build
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
@@ -17,6 +17,12 @@ jobs:
         with:
           distribution: corretto
           java-version: 21
+      - name: Swift tests (without swift-java)
+        run: swift test
+      - name: Swift tests (with jextract)
+        run: swift test
+        env:
+          SWIFT_JAVA_BUILD: 1
       - name: Kotlin tests (JVM, macOS)
         run: ./gradlew :jvm:test
       - name: iOS build (without swift-java)

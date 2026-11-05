@@ -10,6 +10,10 @@ import java.net.URI
 import java.util.Optional
 import java.util.OptionalLong
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import com.example.shapes.models.LibraryError
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -77,5 +81,43 @@ class ViewModelsTest {
         vm.setIcon(null).awaitOnMain()
         assertEquals(1, shared.size)
         assertEquals(listOf("dark", null), icons)
+    }
+
+    @Test
+    fun defaultCallbacks() = onMainThread {
+        val login = LoginViewModel.init(LoginViewModel.Callbacks.init())
+        login.submit("ada@example.com")
+        assertEquals("ada@example.com", login.email)
+
+        val vm = ShelfViewModel.init(Dependencies.preview(), ShelfViewModel.Callbacks.init())
+        vm.load("cosmos").awaitOnMain()
+        assertEquals(listOf("Cosmos"), vm.books.map { it.title })
+        vm.open(0)
+        vm.selectAll()
+        vm.verify(null, null)
+        vm.share(Genre.fiction).awaitOnMain()
+        vm.setIcon(null).awaitOnMain()
+        assertEquals(1, vm.books.size)
+    }
+
+    @Test
+    fun someCallbacks() = onMainThread {
+        val opened = mutableListOf<String>()
+        val vm = ShelfViewModel.init(
+            Dependencies.preview(),
+            ShelfViewModel.Callbacks.init({ book: Book -> opened += book.title }, { _: Array<Book> -> }),
+        )
+        vm.load("long").awaitOnMain()
+        vm.open(0)
+        assertEquals(listOf("A Long Story"), opened)
+    }
+
+    @Test
+    fun failedLoads() = onMainThread {
+        val vm = ShelfViewModel.init(Dependencies.preview(), ShelfViewModel.Callbacks.init())
+        val failure = assertFailsWith<ExecutionException> { vm.load("").awaitOnMain() }
+        assertIs<LibraryError>(failure.cause)
+        assertEquals(false, vm.isLoading)
+        assertEquals(0, vm.books.size)
     }
 }

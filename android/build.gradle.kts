@@ -34,6 +34,7 @@ val swiftBuild = tasks.register<Exec>("swiftBuildAndroid") {
     )
     inputs.dir(packageDir.resolve("Sources"))
     inputs.file(packageDir.resolve("Package.swift"))
+    inputs.dir(packageDir.resolve("swift-java/Sources"))
     outputs.dirs(modules.map { generatedJava(it) })
     outputs.file(swiftBuildDir.resolve("out/Products/Debug-android-aarch64/libShapesApp.so"))
 }
