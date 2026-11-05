@@ -67,6 +67,97 @@ runs `Tests/shared` as instrumented tests. Its test runner loads the Swift libra
 before the tests run, as an app does at startup: libdispatch binds its main queue, which Swift's main
 actor runs on, to the thread that loads it.
 
+## Kotlin ergonomics (proposal)
+
+The bindings are Java, so Kotlin calls them through Java's types: `Optional`, `CompletableFuture`,
+functional interfaces. The proposal is an opt-in `kotlinOutput` flag in `swift-java.config`, default off,
+that keeps the generated Java as the binding layer (same JNI glue, SwiftKit runtime and Gradle setup) and
+1. emits Java that reads well from Kotlin: nullable types instead of `Optional`, and enums with payloads as
+   sealed interfaces, which Kotlin's `when` checks exhaustively;
+2. adds a thin generated `.kt` file per module, depending on kotlin-stdlib and kotlinx-coroutines (hence
+   opt-in): `suspend` functions, `Flow`, extension functions and suspend lambdas.
+
+Before is what `Tests/shared` writes today; after is the target.
+
+**Optionals** in closure parameters and enum payloads (method parameters and results are already nullable,
+with `optionalsAsNullable`):
+
+```kotlin
+// Before
+{ code: Optional<String>, attempt: OptionalLong ->
+    verified += code.orElse(null) to (if (attempt.isPresent) attempt.asLong else null)
+}
+assertEquals("bye", closed.reason.get())
+
+// After
+{ code: String?, attempt: Long? -> verified += code to attempt }
+assertEquals("bye", closed.reason)
+```
+
+**Enums with payloads**, as sealed interfaces:
+
+```kotlin
+// Before
+val closed = Message.closed(1000, "bye").getAsClosed()!!.get()
+assertEquals(1000, closed.code)
+
+// After: exhaustive, no `else`
+when (message) {
+    is Message.Closed -> assertEquals(1000, message.code)
+    is Message.String -> fail()
+}
+```
+
+**`async` functions**, as `suspend` functions that throw the Swift error, and cancel the Swift task when
+the coroutine is cancelled:
+
+```kotlin
+// Before
+val offline = assertFailsWith<ExecutionException> { state.borrow(book).get() }
+assertIs<LibraryError>(offline.cause)
+vm.load("a").awaitOnMain()  // a helper running the main loop while it waits
+
+// After
+assertFailsWith<LibraryError> { state.borrow(book) }
+vm.load("a")
+```
+
+**`async` callbacks**, as suspend lambdas:
+
+```kotlin
+// Before
+{ vm: ShelfViewModel, genre: Genre -> shared += vm.appName; CompletableFuture.completedFuture(null) }
+
+// After
+{ vm: ShelfViewModel, genre: Genre -> shared += vm.appName }
+```
+
+**`AsyncSequence`**, as `Flow` (a shape to add: `DownloadProgress.updates: AsyncStream<Double>`, which
+jextract skips today):
+
+```kotlin
+// After
+progress.updates.take(2).collect { values += it }
+```
+
+**An extension of another module's type**, as extension functions (today's gap):
+
+```kotlin
+// Before
+val sharing = com.example.shapes.clients.Book.wrapMemoryAddressUnsafe(book.`$memoryAddress`(), SwiftArena.ofConfined())
+sharing.shareText()
+
+// After
+book.shareText()  // import com.example.shapes.clients.shareText
+```
+
+Open questions:
+- Whether the enum itself becomes the sealed interface (`when (message)`, each case a record holding its
+  copied payload), or stays a class with a sealed `getCase()` (`when (val case = message.case)`).
+- Where `@MainActor` work runs: a `suspend` call on Android's main dispatcher lets the main looper run it;
+  JVM tests need a main dispatcher that runs Swift's main loop, which replaces `awaitOnMain()`.
+- Out of scope: Observation to Compose state (Skip's), and arrays as `List`s.
+
 ## What it takes to use swift-java from outside its repository
 
 These are what this repository had to set up itself, and what an app would too:
@@ -80,6 +171,9 @@ These are what this repository had to set up itself, and what an app would too:
   module, each links its own copy of the modules it depends on, and Swift casts fail between the copies.
 - The Swift SDK for Android needs the swift.org toolchain of its version, first on `PATH`: swift-java's
   build plugins run `swift` themselves.
+- Kotlin implementations of Swift protocols (`ShapesClients`) need `enableJavaCallbacks`. By default that
+  runs Gradle, javac and wrap-java inside the SwiftPM build, with its sandbox disabled;
+  `"javaCallbacksBindings": "jextract"` has jextract print the Swift bindings it needs instead.
 
 ## Gaps
 
@@ -89,9 +183,6 @@ build and the Kotlin tests then check.
 - `#if`: without a static build configuration jextract treats every platform as active, so a macOS
   build gets thunks for `#if os(Android)` API (`Platform.androidOnly()`,
   `ShelfViewModel.androidBackPressed()`), and it treats `canImport(_:)` as false.
-- Closures returning a protocol Kotlin implements (`LifecycleObserverFactory.init(makeObserver:)`):
-  Kotlin implementations of Swift protocols need `enableJavaCallbacks`, which runs Gradle, javac and
-  wrap-java inside the SwiftPM build.
 - Optional arrays of primitives as parameters (`Shelf.withPageCounts(_:)`; they work as results).
 - An extension of another module's type (`extension Book` in `ShapesClients`) becomes a separate Java
   class, `com.example.shapes.clients.Book`, rather than members Kotlin can call on a
