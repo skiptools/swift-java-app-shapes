@@ -192,9 +192,6 @@ build and the Kotlin tests then check.
   build gets thunks for `#if os(Android)` API (`Platform.androidOnly()`,
   `ShelfViewModel.androidBackPressed()`), and it treats `canImport(_:)` as false.
 - Optional arrays of primitives as parameters (`Shelf.withPageCounts(_:)`; they work as results).
-- An extension of another module's type (`extension Book` in `ShapesClients`) becomes a separate Java
-  class, `com.example.shapes.clients.Book`, rather than members Kotlin can call on a
-  `com.example.shapes.models.Book`: Kotlin reaches it only by wrapping the entity's address.
 - Sets as parameters (`Shelf.init(id:books:tags:)`): Kotlin can't create a `SwiftSet`, so it can pass only
   a set Swift returned.
 
