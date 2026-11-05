@@ -3,25 +3,49 @@ package com.example.shapes
 import com.example.shapes.dependencies.Dependencies
 import com.example.shapes.models.Book
 import com.example.shapes.models.Genre
+import com.example.shapes.models.LibraryError
 import com.example.shapes.viewmodels.LoginViewModel
 import com.example.shapes.viewmodels.MainLoop
 import com.example.shapes.viewmodels.ShelfViewModel
+import com.example.shapes.viewmodels.load
+import com.example.shapes.viewmodels.setIcon
+import com.example.shapes.viewmodels.share
+import com.example.shapes.viewmodels.suspending
 import java.net.URI
 import java.util.Optional
-import java.util.OptionalLong
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
-import com.example.shapes.models.LibraryError
-import kotlin.test.assertFailsWith
-import kotlin.test.assertIs
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
-/** Waits for a main-actor future while running the main loop, as Android's main looper would. */
-fun <T> CompletableFuture<T>.awaitOnMain(): T {
+/** Runs coroutines on the main thread, from `runMain`'s loop, as Android's main dispatcher would. */
+private class MainLoopDispatcher : CoroutineDispatcher() {
+    val queue = LinkedBlockingQueue<Runnable>()
+
+    override fun dispatch(context: CoroutineContext, block: Runnable) {
+        queue.add(block)
+    }
+}
+
+/**
+ * Runs `block` in a coroutine on the main thread, running Swift's main loop while it's suspended, as
+ * Android's main looper does: main-actor `async` functions finish on the main thread.
+ */
+fun <T> runMain(block: suspend CoroutineScope.() -> T): T = onMainThread {
+    val dispatcher = MainLoopDispatcher()
+    val result = AtomicReference<Result<T>?>(null)
+    CoroutineScope(dispatcher).launch { result.set(runCatching { block() }) }
     val deadline = System.currentTimeMillis() + 10_000
-    while (!isDone && System.currentTimeMillis() < deadline) MainLoop.run(0.01)
-    return get()
+    while (result.get() == null && System.currentTimeMillis() < deadline) {
+        dispatcher.queue.poll()?.run() ?: MainLoop.run(0.01)
+    }
+    (result.get() ?: error("timed out")).getOrThrow()
 }
 
 // Main-actor view models must be used from the main thread: `onMainThread` (Tests/jvm, Tests/android).
@@ -37,7 +61,7 @@ class ViewModelsTest {
     }
 
     @Test
-    fun observableViewModelWithManyKindsOfCallbacks() = onMainThread {
+    fun observableViewModelWithManyKindsOfCallbacks() = runMain {
         val opened = mutableListOf<String>()
         val selected = mutableListOf<Int>()
         val links = mutableListOf<URI>()
@@ -46,14 +70,12 @@ class ViewModelsTest {
             { book: Book -> opened += book.title },
             { books: Array<Book> -> selected += books.size },
             { urls: Array<URI> -> links += urls },
-            { code: Optional<String>, attempt: OptionalLong ->
-                verified += code.orElse(null) to (if (attempt.isPresent) attempt.asLong else null)
-            },
+            { code: String?, attempt: Long? -> verified += code to attempt },
         )
         val vm = ShelfViewModel.init(Dependencies.preview(), callbacks)
         assertEquals("Library", vm.appName)
 
-        vm.load("a").awaitOnMain()
+        vm.load("a")
         assertEquals(false, vm.isLoading)
         assertEquals(2, vm.books.size)
 
@@ -67,56 +89,55 @@ class ViewModelsTest {
     }
 
     @Test
-    fun asyncCallbacksReturnFutures() = onMainThread {
+    fun asyncCallbacksAsSuspendLambdas() = runMain {
         val shared = mutableListOf<String>()
         val icons = mutableListOf<String?>()
         val callbacks = ShelfViewModel.Callbacks.init(
-            { _: Book -> }, { _: Array<Book> -> }, { _: Array<URI> -> }, { _: Optional<String>, _: OptionalLong -> },
-            { vm: ShelfViewModel, genre: Genre -> shared += "${vm.appName} ${genre.toDebugString()}"; CompletableFuture.completedFuture(null) },
-            { name: Optional<String> -> icons += name.orElse(null); CompletableFuture.completedFuture(null) },
+            { _: Book -> }, { _: Array<Book> -> }, { _: Array<URI> -> }, { _: String?, _: Long? -> },
+            { vm: ShelfViewModel, genre: Genre -> suspending { shared += "${vm.appName} ${genre.name}" } },
+            { name: String? -> suspending { icons += name } },
         )
         val vm = ShelfViewModel.init(Dependencies.preview(), callbacks)
-        vm.share(Genre.science()).awaitOnMain()
-        vm.setIcon("dark").awaitOnMain()
-        vm.setIcon(null).awaitOnMain()
+        vm.share(Genre.science())
+        vm.setIcon("dark")
+        vm.setIcon(null)
         assertEquals(1, shared.size)
         assertEquals(listOf("dark", null), icons)
     }
 
     @Test
-    fun defaultCallbacks() = onMainThread {
+    fun defaultCallbacks() = runMain {
         val login = LoginViewModel.init(LoginViewModel.Callbacks.init())
         login.submit("ada@example.com")
         assertEquals("ada@example.com", login.email)
 
         val vm = ShelfViewModel.init(Dependencies.preview(), ShelfViewModel.Callbacks.init())
-        vm.load("cosmos").awaitOnMain()
+        vm.load("cosmos")
         assertEquals(listOf("Cosmos"), vm.books.map { it.title })
         vm.open(0)
         vm.selectAll()
         vm.verify(null, null)
-        vm.share(Genre.fiction).awaitOnMain()
-        vm.setIcon(null).awaitOnMain()
+        vm.share(Genre.fiction)
+        vm.setIcon(null)
         assertEquals(1, vm.books.size)
     }
 
     @Test
-    fun someCallbacks() = onMainThread {
+    fun someCallbacks() = runMain {
         val opened = mutableListOf<String>()
         val vm = ShelfViewModel.init(
             Dependencies.preview(),
             ShelfViewModel.Callbacks.init({ book: Book -> opened += book.title }, { _: Array<Book> -> }),
         )
-        vm.load("long").awaitOnMain()
+        vm.load("long")
         vm.open(0)
         assertEquals(listOf("A Long Story"), opened)
     }
 
     @Test
-    fun failedLoads() = onMainThread {
+    fun failedLoads() = runMain {
         val vm = ShelfViewModel.init(Dependencies.preview(), ShelfViewModel.Callbacks.init())
-        val failure = assertFailsWith<ExecutionException> { vm.load("").awaitOnMain() }
-        assertIs<LibraryError>(failure.cause)
+        assertFailsWith<LibraryError> { vm.load("") }
         assertEquals(false, vm.isLoading)
         assertEquals(0, vm.books.size)
     }

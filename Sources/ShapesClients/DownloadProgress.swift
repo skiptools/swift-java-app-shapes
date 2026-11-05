@@ -27,4 +27,32 @@ public final class DownloadProgress: @unchecked Sendable {
   public func advance(by amount: Double) {
     subject.send(min(1, subject.value + amount))
   }
+
+  /// Shape: an `AsyncStream` of values, which finishes when the download completes.
+  public func updates() -> AsyncStream<Double> {
+    AsyncStream { continuation in
+      nonisolated(unsafe) let subscription = subject.sink { value in
+        continuation.yield(value)
+        if value >= 1 {
+          continuation.finish()
+        }
+      }
+      continuation.onTermination = { _ in subscription.cancel() }
+    }
+  }
+
+  /// How many times `waitUntilComplete()` was cancelled.
+  public private(set) var cancellations: Int64 = 0
+
+  /// Shape: a long-running `async` function that stops when its task is cancelled.
+  public func waitUntilComplete() async throws {
+    do {
+      while current < 1 {
+        try await Task.sleep(nanoseconds: 10_000_000)
+      }
+    } catch {
+      cancellations += 1
+      throw error
+    }
+  }
 }

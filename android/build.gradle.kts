@@ -72,6 +72,7 @@ android {
     sourceSets {
         named("main") {
             java.directories += modules.map { generatedJava(it).path }
+            kotlin.directories += modules.map { generatedJava(it).path }
             jniLibs.directories += layout.buildDirectory.dir("swift-jniLibs").get().asFile.path
         }
         named("androidTest") {
@@ -88,6 +89,7 @@ tasks.named("preBuild") { dependsOn(copySwiftLibraries) }
 
 dependencies {
     implementation("org.swift.swiftkit:swiftkit-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     androidTestImplementation(kotlin("test-junit"))
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

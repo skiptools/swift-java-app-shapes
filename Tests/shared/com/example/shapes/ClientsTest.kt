@@ -8,18 +8,29 @@ import com.example.shapes.clients.NotificationsClient
 import com.example.shapes.clients.NotificationsClientMock
 import com.example.shapes.clients.SearchClient
 import com.example.shapes.clients.SearchClientMock
+import com.example.shapes.clients.search
+import com.example.shapes.clients.shareText
+import com.example.shapes.clients.updates
+import com.example.shapes.clients.waitUntilComplete
 import com.example.shapes.models.Book
 import com.example.shapes.models.LibraryError
 import com.example.shapes.models.Message
 import com.example.shapes.models.Shelf
 import com.example.shapes.models.ShelfID
-import java.util.concurrent.ExecutionException
-import org.swift.swiftkit.core.SwiftArena
-import kotlin.test.assertNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 class ClientsTest {
     private val books = arrayOf(Book.init("1", "Cosmos"), Book.init("2", "Cosmic Dust"), Book.init("3", "History"))
@@ -28,9 +39,10 @@ class ClientsTest {
     fun protocolExtensionMembersAndAsyncRequirements() {
         val search: SearchClient = SearchClientMock.init("mock", books)
         assertEquals("search mock", search.name)   // implemented by the protocol extension
-        assertEquals(2, search.search("cosm").get().size)
-        val failure = assertFailsWith<ExecutionException> { search.search("").get() }
-        assertIs<LibraryError>(failure.cause)
+        runBlocking {
+            assertEquals(2, search.search("cosm").size)
+            assertFailsWith<LibraryError> { search.search("") }
+        }
     }
 
     @Test
@@ -91,12 +103,8 @@ class ClientsTest {
 
     @Test
     fun extensionOfAnotherModulesType() {
-        // Gap: the extension is a separate class, reached only by wrapping the entity's address, which neither
-        // copies nor retains it. The arena is never closed, so only `book` destroys the value.
         val book = Book.init("1", "Cosmos", 300)
-        val sharing = com.example.shapes.clients.Book.wrapMemoryAddressUnsafe(book.`$memoryAddress`(), SwiftArena.ofConfined())
-        assertEquals("Cosmos (300 pages)", sharing.shareText())
-        assertEquals("Cosmos", book.title)
+        assertEquals("Cosmos (300 pages)", book.shareText())
     }
 
     @Test
@@ -120,5 +128,42 @@ class ClientsTest {
         factory.observeOnce("a")
         factory.observeOnce("b")
         assertEquals(listOf("a", "b"), disposed)
+    }
+
+    @Test
+    fun suspendFunctionsAwaitSwift() = runBlocking {
+        val progress = DownloadProgress.init()
+        val waiting = launch(Dispatchers.Default) { progress.waitUntilComplete() }
+        progress.advance(1.0)
+        withTimeout(5_000) { waiting.join() }
+        assertEquals(0, progress.cancellations)
+    }
+
+    @Test
+    fun cancellingTheCoroutineCancelsTheSwiftTask() = runBlocking {
+        val progress = DownloadProgress.init()
+        val waiting = launch(Dispatchers.Default) { progress.waitUntilComplete() }
+        delay(100)
+        waiting.cancelAndJoin()
+        withTimeout(5_000) { while (progress.cancellations == 0L) delay(10) }
+        assertEquals(1, progress.cancellations)
+    }
+
+    @Test
+    fun asyncStreamAsAFlow() = runBlocking {
+        val progress = DownloadProgress.init()
+        val values = async(Dispatchers.Default) { progress.updates().toList() }
+        delay(100)
+        progress.advance(0.5)
+        progress.advance(0.5)
+        // The stream finishes when the download does, which completes the flow.
+        assertEquals(1.0, withTimeout(5_000) { values.await() }.last())
+    }
+
+    @Test
+    fun cancellingACollectionStopsTheStream() = runBlocking {
+        val progress = DownloadProgress.init()
+        // `first()` cancels the collection after one value; the stream doesn't finish by itself.
+        assertEquals(0.0, withTimeout(5_000) { progress.updates().first() })
     }
 }

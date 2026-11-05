@@ -1,32 +1,35 @@
 package com.example.shapes
 
-import com.example.shapes.dependencies.AppState
-import com.example.shapes.dependencies.Dependencies
-import com.example.shapes.dependencies.Reader
-import com.example.shapes.dependencies.System
-import com.example.shapes.models.Book
-import com.example.shapes.models.LibraryError
-import com.example.shapes.models.Scheme
-import java.util.concurrent.ExecutionException
 import com.example.shapes.clients.CatalogClient
 import com.example.shapes.clients.NotificationsClientMock
 import com.example.shapes.clients.SearchClientMock
+import com.example.shapes.clients.search
+import com.example.shapes.dependencies.AppState
 import com.example.shapes.dependencies.Clients
+import com.example.shapes.dependencies.Dependencies
 import com.example.shapes.dependencies.Loan
+import com.example.shapes.dependencies.Reader
+import com.example.shapes.dependencies.System
+import com.example.shapes.dependencies.borrow
+import com.example.shapes.dependencies.connect
+import com.example.shapes.models.Book
+import com.example.shapes.models.LibraryError
+import com.example.shapes.models.Scheme
 import com.example.shapes.models.Shelf
 import com.example.shapes.models.ShelfID
-import kotlin.test.assertNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlinx.coroutines.runBlocking
 
 class DependenciesTest {
     @Test
     fun clientsTypedAsAnotherModulesProtocols() {
         val clients = Dependencies.preview().clients
         assertEquals("search mock", clients.search.name)
-        assertEquals(1, clients.search.search("cosmos").get().size)
+        assertEquals(1, runBlocking { clients.search.search("cosmos") }.size)
         assertEquals(1, clients.catalog.all().size)
     }
 
@@ -41,16 +44,15 @@ class DependenciesTest {
     }
 
     @Test
-    fun asyncFunctionsTakingEntities() {
+    fun asyncFunctionsTakingEntities() = runBlocking {
         val state = AppState.init()
         val book = Book.init("1", "Cosmos")
-        val offline = assertFailsWith<ExecutionException> { state.borrow(book).get() }
-        assertIs<LibraryError>(offline.cause)
+        assertFailsWith<LibraryError> { state.borrow(book) }
 
-        state.connect(Reader.init("Ada")).get()
+        state.connect(Reader.init("Ada"))
         assertEquals("Ada", state.reader!!.name)
-        assertEquals(14, state.borrow(book).get().days)
-        state.connect(null).get()
+        assertEquals(14, state.borrow(book).days)
+        state.connect(null)
     }
 
     @Test

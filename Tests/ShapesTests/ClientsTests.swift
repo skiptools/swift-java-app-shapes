@@ -65,6 +65,29 @@ struct ClientsTests {
     #expect(client.deliveredCount == 3)
   }
 
+  @Test func downloadProgressAsync() async throws {
+    let progress = DownloadProgress()
+    async let completion: Void = progress.waitUntilComplete()
+    var values: [Double] = []
+    let updates = Task {
+      for await value in progress.updates() {
+        values.append(value)
+      }
+      return values
+    }
+    try await Task.sleep(nanoseconds: 50_000_000)
+    progress.advance(by: 1)
+    try await completion
+    #expect(await updates.value.last == 1)
+
+    let cancelled = DownloadProgress()
+    let cancelledWait = Task { try await cancelled.waitUntilComplete() }
+    try await Task.sleep(nanoseconds: 50_000_000)
+    cancelledWait.cancel()
+    await #expect(throws: CancellationError.self) { try await cancelledWait.value }
+    #expect(cancelled.cancellations == 1)
+  }
+
   @Test func downloadProgress() {
     let progress = DownloadProgress()
     var values: [Double] = []

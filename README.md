@@ -35,7 +35,7 @@ swift-java/              skiptools/swift-java at skip/integration (submodule)
 |---|---|---|
 | `ShapesUtil` | `all` | static helpers, constants inferred from literals, `@autoclosure` arguments, Java keywords as names, a method named like `Object.wait()`, platform-specific API |
 | `ShapesModels` | `annotated` | Codable entities with Foundation values, raw-value enums, enums with payloads (one carrying an `Error`, one whose case shadows a payload type, one a closure), nested arrays, sets, optional labeled tuples, overloads that differ only in pointer types, clashing accessor names, a default-argument overload that would be ambiguous, a parameter named `result`, a `@MainActor` callback typealias |
-| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure, an extension of another module's type, dictionaries and sets of another module's types, Combine state |
+| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure, an extension of another module's type, dictionaries and sets of another module's types, Combine state, an `AsyncStream`, a long-running `async` function that stops when cancelled |
 | `ShapesDependencies` | `all` | a container of clients typed as another module's protocols, `@autoclosure @escaping` configuration returning another module's enum, app state, async functions taking entities |
 | `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, async callbacks returning futures, a closure returning an optional array of entities |
 
@@ -67,20 +67,22 @@ runs `Tests/shared` as instrumented tests. Its test runner loads the Swift libra
 before the tests run, as an app does at startup: libdispatch binds its main queue, which Swift's main
 actor runs on, to the thread that loads it.
 
-## Kotlin ergonomics (proposal)
+## Kotlin ergonomics
 
 The bindings are Java, so Kotlin calls them through Java's types: `Optional`, `CompletableFuture`,
-functional interfaces. The proposal is an opt-in `kotlinOutput` flag in `swift-java.config`, default off,
-that keeps the generated Java as the binding layer (same JNI glue, SwiftKit runtime and Gradle setup) and
-1. emits Java that reads well from Kotlin: nullable types instead of `Optional`, and enums with payloads as
-   sealed interfaces, which Kotlin's `when` checks exhaustively;
-2. adds a thin generated `.kt` file per module, depending on kotlin-stdlib and kotlinx-coroutines (hence
-   opt-in): `suspend` functions, `Flow`, extension functions and suspend lambdas.
+functional interfaces. `"kotlinOutput": true` in `swift-java.config` (opt-in; the default Java is unchanged)
+keeps the generated Java as the binding layer (same JNI glue, SwiftKit runtime and Gradle setup) and
+1. emits Java that reads well from Kotlin: nullable types instead of `Optional`, and `async` and stream
+   methods named `<name>Async` and `<name>Stream` so the Kotlin functions below aren't shadowed by them;
+2. adds a `<Module>Kotlin.kt` per module, which needs kotlin-stdlib and kotlinx-coroutines (hence opt-in):
+   `suspend` functions, `Flow`s, extension functions, and `suspending { }` for async callbacks.
 
-Before is what `Tests/shared` writes today; after is the target.
+Every module here sets it. The Gradle projects compile the generated `.kt` with the Java
+(`kotlin.srcDirs`), and depend on kotlinx-coroutines-core. Before is what `Tests/shared` wrote without it;
+after is what it writes now.
 
-**Optionals** in closure parameters and enum payloads (method parameters and results are already nullable,
-with `optionalsAsNullable`):
+**Optionals** in closure parameters and enum payloads (method parameters and results were already
+nullable, with `optionalsAsNullable`, which `kotlinOutput` implies):
 
 ```kotlin
 // Before
@@ -94,22 +96,23 @@ assertEquals("bye", closed.reason.get())
 assertEquals("bye", closed.reason)
 ```
 
-**Enums with payloads**, as sealed interfaces:
+**Enums with payloads**: their `Case` is a Java sealed interface of records, which Kotlin's `when` checks
+exhaustively (a missing case doesn't compile: `ModelsTest.enumPayloads`):
 
 ```kotlin
 // Before
 val closed = Message.closed(1000, "bye").getAsClosed()!!.get()
 assertEquals(1000, closed.code)
 
-// After: exhaustive, no `else`
-when (message) {
-    is Message.Closed -> assertEquals(1000, message.code)
-    is Message.String -> fail()
+// After
+when (val case = message.case) {
+    is Message.Case.Closed -> assertEquals(1000, case.code)
+    is Message.Case.String -> fail()
 }
 ```
 
-**`async` functions**, as `suspend` functions that throw the Swift error, and cancel the Swift task when
-the coroutine is cancelled:
+**`async` functions**, as `suspend` functions that throw the Swift error; cancelling the coroutine cancels
+the Swift task (`ClientsTest.cancellingTheCoroutineCancelsTheSwiftTask`):
 
 ```kotlin
 // Before
@@ -117,45 +120,50 @@ val offline = assertFailsWith<ExecutionException> { state.borrow(book).get() }
 assertIs<LibraryError>(offline.cause)
 vm.load("a").awaitOnMain()  // a helper running the main loop while it waits
 
-// After
+// After (import com.example.shapes.dependencies.borrow)
 assertFailsWith<LibraryError> { state.borrow(book) }
-vm.load("a")
+vm.load("a")  // in a coroutine on the main thread
 ```
 
-**`async` callbacks**, as suspend lambdas:
+**`async` callbacks**, as suspend lambdas run by `suspending { }`:
 
 ```kotlin
 // Before
 { vm: ShelfViewModel, genre: Genre -> shared += vm.appName; CompletableFuture.completedFuture(null) }
 
 // After
-{ vm: ShelfViewModel, genre: Genre -> shared += vm.appName }
+{ vm: ShelfViewModel, genre: Genre -> suspending { shared += vm.appName } }
 ```
 
-**`AsyncSequence`**, as `Flow` (a shape to add: `DownloadProgress.updates: AsyncStream<Double>`, which
-jextract skips today):
+**`AsyncStream`s**, as `Flow`s; cancelling the collection cancels the Swift task iterating the stream:
 
 ```kotlin
+// Before: no shape
 // After
-progress.updates.take(2).collect { values += it }
+val values = progress.updates().toList()  // DownloadProgress.updates() -> AsyncStream<Double>
 ```
 
-**An extension of another module's type**, as extension functions (today's gap):
+**An extension of another module's type**, as extension functions:
 
 ```kotlin
 // Before
 val sharing = com.example.shapes.clients.Book.wrapMemoryAddressUnsafe(book.`$memoryAddress`(), SwiftArena.ofConfined())
 sharing.shareText()
 
-// After
-book.shareText()  // import com.example.shapes.clients.shareText
+// After (import com.example.shapes.clients.shareText)
+book.shareText()
 ```
 
-Open questions:
-- Whether the enum itself becomes the sealed interface (`when (message)`, each case a record holding its
-  copied payload), or stays a class with a sealed `getCase()` (`when (val case = message.case)`).
-- Where `@MainActor` work runs: a `suspend` call on Android's main dispatcher lets the main looper run it;
-  JVM tests need a main dispatcher that runs Swift's main loop, which replaces `awaitOnMain()`.
+Decisions, and what's left:
+- Enums keep their class and a sealed `getCase()` (`when (val case = message.case)`), rather than becoming
+  the sealed type themselves (`when (message)`), which would make each case a subclass holding the Swift
+  value.
+- `async` callbacks still return a future in Java, so Kotlin passes `suspending { … }` rather than a bare
+  suspend lambda: a Java functional interface can't take one.
+- `@MainActor` work: a `suspend` call on Android's main dispatcher lets the main looper run it. The JVM
+  tests' `runMain` is a main dispatcher that runs Swift's main loop, replacing `awaitOnMain()`.
+- Closure results are still Java optionals (`ShelfViewModel.setSeedProvider`), and a Kotlin wrapper for a
+  type's static `async` function isn't generated (Kotlin can't add static members to a Java class).
 - Out of scope: Observation to Compose state (Skip's), and arrays as `List`s.
 
 ## What it takes to use swift-java from outside its repository

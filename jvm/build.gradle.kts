@@ -28,6 +28,8 @@ fun generatedJava(module: String) =
 sourceSets {
     main {
         java.srcDirs(modules.map { generatedJava(it) })
+        // With `kotlinOutput`, jextract also generates a Kotlin file per module.
+        kotlin.srcDirs(modules.map { generatedJava(it) })
     }
     test {
         kotlin.srcDirs(packageDir.resolve("Tests/shared"), packageDir.resolve("Tests/jvm"))
@@ -39,6 +41,7 @@ tasks.named("compileKotlin") { dependsOn(swiftBuild) }
 
 dependencies {
     implementation("org.swift.swiftkit:swiftkit-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     testImplementation(kotlin("test"))
 }
 

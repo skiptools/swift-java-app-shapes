@@ -74,14 +74,23 @@ class ModelsTest {
 
     @Test
     fun enumPayloads() {
-        val failure = LibraryError.failed(IllegalStateException("disk"))
-        assertIs<IllegalStateException>(failure.getAsFailed()!!.get().underlying)
-        assertEquals("id", LibraryError.notFound("id").getAsNotFound()!!.get().id)
+        // Exhaustive: the Java `Case` is a sealed interface, so a missing case doesn't compile.
+        fun describe(error: LibraryError): String = when (val case = error.case) {
+            is LibraryError.Case.NotFound -> "not found ${case.id}"
+            is LibraryError.Case.Failed -> "failed ${case.underlying.message}"
+            is LibraryError.Case.Offline -> "offline"
+        }
+        assertEquals("failed disk", describe(LibraryError.failed(IllegalStateException("disk"))))
+        assertEquals("not found id", describe(LibraryError.notFound("id")))
+        assertEquals("offline", describe(LibraryError.offline()))
 
-        assertEquals("hello", Message.string("hello").getAsString()!!.get().arg0)
-        val closed = Message.closed(1000, "bye").getAsClosed()!!.get()
-        assertEquals(1000, closed.code)
-        assertEquals("bye", closed.reason.get())
+        fun describe(message: Message): String = when (val case = message.case) {
+            is Message.Case.String -> case.arg0
+            is Message.Case.Closed -> "closed ${case.code} ${case.reason ?: "-"}"
+        }
+        assertEquals("hello", describe(Message.string("hello")))
+        assertEquals("closed 1000 bye", describe(Message.closed(1000, "bye")))
+        assertEquals("closed 1001 -", describe(Message.closed(1001, null)))
     }
 
     @Test
@@ -144,9 +153,9 @@ class ModelsTest {
         assertTrue(offline.getAsOffline().isPresent)
         assertIs<LibraryError.Case.NotFound>(LibraryError.notFound("x").case)
 
-        val closed = Message.closed(1001, null).getAsClosed()!!.get()
+        val closed = Message.closed(1001, null).case as Message.Case.Closed
         assertEquals(1001, closed.code)
-        assertTrue(closed.reason.isEmpty)
+        assertNull(closed.reason)
         assertIs<Message.Case.String>(Message.string("hi").case)
     }
 
