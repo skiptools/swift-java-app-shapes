@@ -62,6 +62,12 @@ struct ModelsTests {
     #expect(counted.books == books)
     #expect(counted.tags == ["new"])
     #expect(counted.withPageCounts(nil).pageCounts == nil)
+
+    var featured = Shelf(id: ShelfID("f"), books: books, featured: [books[0]])
+    #expect(featured.featured == [books[0]])
+    #expect(featured.withPageCounts([1]).featured == [books[0]])
+    featured.featured = nil
+    #expect(featured.featured == nil)
   }
 
   @Test func libraryError() {

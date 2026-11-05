@@ -130,6 +130,19 @@ class ModelsTest {
         assertEquals("s", shelf.id.rawValue)
         assertEquals(0, shelf.tags.size)
         assertNull(shelf.pageCounts)
+        assertNull(shelf.featured)
+    }
+
+    @Test
+    fun optionalArraysAsParameters() {
+        val shelf = Shelf.init(ShelfID.init("s"), arrayOf(Book.init("1", "One")))
+        assertEquals(listOf(10L, 20L), shelf.withPageCounts(longArrayOf(10, 20)).pageCounts!!.toList())
+        assertNull(shelf.withPageCounts(null).pageCounts)
+
+        shelf.featured = arrayOf(Book.init("2", "Two"))
+        assertEquals(listOf("Two"), shelf.featured!!.map { it.title })
+        shelf.featured = null
+        assertNull(shelf.featured)
     }
 
     @Test

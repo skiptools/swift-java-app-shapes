@@ -19,24 +19,26 @@ public struct Shelf: Sendable {
   public let books: [Book]
   public let tags: Set<String>
   public let pageCounts: [Int64]?
+  /// Shape: an optional array of entities, set through the initializer and the property.
+  public var featured: [Book]?
 
-  public init(id: ShelfID, books: [Book], tags: Set<String> = []) {
+  public init(id: ShelfID, books: [Book], tags: Set<String> = [], featured: [Book]? = nil) {
     self.id = id
     self.books = books
     self.tags = tags
     self.pageCounts = nil
+    self.featured = featured
   }
 
   private init(_ shelf: Shelf, pageCounts: [Int64]?) {
     id = shelf.id
     books = shelf.books
     tags = shelf.tags
+    featured = shelf.featured
     self.pageCounts = pageCounts
   }
 
   /// Shape: an optional array of primitives as a parameter.
-  /// Gap: optional primitive arrays are supported as results, not yet as parameters.
-  @JavaExport(false)
   public func withPageCounts(_ pageCounts: [Int64]?) -> Shelf {
     Shelf(self, pageCounts: pageCounts)
   }

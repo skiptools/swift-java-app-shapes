@@ -186,7 +186,7 @@ package, and against the app it comes from (no new skipped declarations, javac o
 | 1 | Escaping closures taking or returning jextracted types, `@Sendable`/`@MainActor` closures, across modules | [`jextract-closures-jextracted-types`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closures-jextracted-types) | upstream `main` |  |
 | 2 | Report every skipped declaration; `failOnSkippedDeclarations` | [`jextract-skipped-declarations`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-skipped-declarations) | upstream `main` |  |
 | 3 | Enum payload types shadowed by the `Case` records' names | [`jextract-enum-case-name-collision`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-enum-case-name-collision) | upstream `main` |  |
-| 4 | `Int` closures, `inout` thunks, unannotated variable types | [`jextract-codegen-fixes`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-codegen-fixes) | branch 2 |  |
+| 4 | `Int` closures, `inout` thunks; the types of unannotated properties (literals, initializers, `Type.member`) | [`jextract-codegen-fixes`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-codegen-fixes) | branch 2 |  |
 | 5 | Java implementations of `async` and cross-module protocols | [`jextract-java-implemented-protocols`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-java-implemented-protocols) | upstream `main` |  |
 | 6 | Swift class hierarchies as Java class hierarchies | [`jextract-class-inheritance`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-class-inheritance) | upstream `main` |  |
 | 7 | Cancelling an `async` function's future cancels the Swift task | [`jextract-async-cancellation`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-async-cancellation) | branch 5 |  |
@@ -199,7 +199,7 @@ package, and against the app it comes from (no new skipped declarations, javac o
 | 14 | `optionalsAsNullable`: optionals as nullable Java types | [`jextract-nullable-optionals`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-nullable-optionals) | upstream `main` |  |
 | 15 | Non-escaping closures taking or returning jextracted types | [`jextract-closure-struct-arguments`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-struct-arguments) | branch 1 |  |
 | 16 | Java enum constants keep the Swift case names | [`jextract-enum-swift-case-names`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-enum-swift-case-names) | branch 12 |  |
-| 17 | `nullableAnnotation` and `nonNullAnnotation`, for Kotlin's nullability | [`jextract-nullability-annotations`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-nullability-annotations) | branch 14 |  |
+| 17 | `nullableAnnotation` and `nonNullAnnotation`, for Kotlin's nullability (arrays stay platform types) | [`jextract-nullability-annotations`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-nullability-annotations) | branch 14 |  |
 | 18 | `@JavaExport(false)` and `exportMode`; prefix and postfix operators skipped | [`jextract-export-control`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-export-control) | upstream `main` | [#950](https://github.com/swiftlang/swift-java/pull/950), [#951](https://github.com/swiftlang/swift-java/pull/951) |
 | 19 | `foundationTypesAsJavaTypes`: Foundation values as standard Java types | [`jextract-foundation-java-types`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-foundation-java-types) | upstream `main` | [#952](https://github.com/swiftlang/swift-java/pull/952) |
 | 20 | `closureMethodName`: the method name of closure interfaces | [`jextract-closure-method-name`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-method-name) | upstream `main` | [#953](https://github.com/swiftlang/swift-java/pull/953) |
@@ -218,14 +218,17 @@ package, and against the app it comes from (no new skipped declarations, javac o
 | 33 | Thunks for another module's type go in the extending file | [`jextract-extension-thunk-files`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-extension-thunk-files) | upstream `main` |  |
 | 34 | Enum cases with closure payloads | [`jextract-enum-unbridged-payloads`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-enum-unbridged-payloads) | upstream `main` |  |
 | 35 | Closures returning arrays of jextracted types, optional or not | [`jextract-closure-array-results`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-array-results) | branch 1 |  |
-| 36 | `javaCallbacksBindings: jextract`; closures returning a protocol Kotlin implements | [`jextract-protocol-bindings`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-protocol-bindings) | branch 35 |  |
+| 36 | `javaCallbacksBindings: jextract`; closures returning a protocol Kotlin implements; bindings for `async` requirements' types | [`jextract-protocol-bindings`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-protocol-bindings) | branch 35 |  |
 | 37 | `kotlinOutput`: Java shaped for Kotlin, and a Kotlin file per module | [`jextract-kotlin-output`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-kotlin-output) | `skip/integration` |  |
 | 38 | A `Sendable` protocol's existential captured without `nonisolated(unsafe)` | [`jextract-sendable-existential-captures`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-sendable-existential-captures) | upstream `main` |  |
 | 39 | swift-java's Gradle scripts without APIs Gradle deprecates | [`gradle-deprecations`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:gradle-deprecations) | upstream `main` |  |
+| 40 | Optional arrays as parameters, setters and initializer arguments included | [`jextract-optional-array-parameters`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-optional-array-parameters) | upstream `main` |  |
+| 41 | `Self` results of structs, enums and classes | [`jextract-self-results`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-self-results) | upstream `main` |  |
 
 `skip/integration` also has, beyond these branches (see [Gaps and limits](#gaps-and-limits)):
 - the change of [#938](https://github.com/swiftlang/swift-java/pull/938) (`@MainActor` isolation in synchronous thunks), closed upstream;
-- a few commits that combine several branches (`Integration: …`), not yet split into branches of their own.
+- a few commits that combine several branches (`Integration: …`), not yet split into branches of their own,
+  among them what makes every protocol of a module with Java callbacks implementable in Kotlin.
 
 ## What it takes to use swift-java from outside its repository
 
@@ -247,11 +250,10 @@ These are what this repository had to set up itself, and what an app would too:
 ## Gaps and limits
 
 **What jextract doesn't handle yet**, marked `@JavaExport(false)` with a `// Gap:` comment: fixing one means
-removing its annotation, which the build and the Kotlin tests then check. The app's Kotlin uses none of them.
+removing its annotation, which the build and the Kotlin tests then check.
 - `#if`: without a static build configuration jextract treats every platform as active, so a macOS build
   gets thunks for `#if os(Android)` API (`Platform.androidOnly()`, `ShelfViewModel.androidBackPressed()`),
   and it treats `canImport(_:)` as false.
-- Optional arrays of primitives as parameters (`Shelf.withPageCounts(_:)`; they work as results).
 - Sets as parameters (`Shelf.init(id:books:tags:)`): Kotlin can't create a `SwiftSet`, so it can pass only a
   set Swift returned (the test marks it with `// Gap:`).
 
