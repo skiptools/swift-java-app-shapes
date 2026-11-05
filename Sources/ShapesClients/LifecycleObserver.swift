@@ -15,8 +15,6 @@ public protocol LifecycleObserver: Sendable {
 public struct LifecycleObserverFactory: Sendable {
   private let makeObserver: @Sendable (String) -> any LifecycleObserver
 
-  /// Gap: Kotlin implementations of a protocol need `enableJavaCallbacks`, and a closure can't return one yet.
-  @JavaExport(false)
   public init(makeObserver: @escaping @Sendable (String) -> any LifecycleObserver) {
     self.makeObserver = makeObserver
   }

@@ -2,6 +2,8 @@ package com.example.shapes
 
 import com.example.shapes.clients.CatalogClient
 import com.example.shapes.clients.DownloadProgress
+import com.example.shapes.clients.LifecycleObserver
+import com.example.shapes.clients.LifecycleObserverFactory
 import com.example.shapes.clients.NotificationsClient
 import com.example.shapes.clients.NotificationsClientMock
 import com.example.shapes.clients.SearchClient
@@ -103,5 +105,20 @@ class ClientsTest {
         assertEquals(0, catalog.all().size)
         assertNull(catalog.all()[ShelfID.init("a")])
         assertEquals(0, catalog.ids().size)
+    }
+
+    @Test
+    fun closureReturningAKotlinImplementationOfAProtocol() {
+        val disposed = mutableListOf<String>()
+        val factory = LifecycleObserverFactory.init { id: String ->
+            object : LifecycleObserver {
+                override fun dispose() {
+                    disposed += id
+                }
+            }
+        }
+        factory.observeOnce("a")
+        factory.observeOnce("b")
+        assertEquals(listOf("a", "b"), disposed)
     }
 }
