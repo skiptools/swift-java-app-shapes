@@ -1,0 +1,8 @@
+.build/
+.build-android/
+.swiftpm/
+build/
+.gradle/
+.kotlin/
+local.properties
+*.xcuserstate

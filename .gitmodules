@@ -1,0 +1,4 @@
+[submodule "swift-java"]
+	path = swift-java
+	url = https://github.com/skiptools/swift-java.git
+	branch = skip/integration

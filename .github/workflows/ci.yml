@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  macos:
+    name: Kotlin tests on the JVM, and the iOS build
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: corretto
+          java-version: 21
+      - name: Kotlin tests (JVM, macOS)
+        run: ./gradlew :jvm:test
+      - name: iOS build (without swift-java)
+        run: xcodebuild -scheme swift-java-app-shapes -destination 'generic/platform=iOS Simulator' -quiet build
