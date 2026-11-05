@@ -49,6 +49,24 @@ struct ClientsTests {
     #expect(disposed.value == 2)
   }
 
+  @Test func analytics() {
+    final class Client: AnalyticsClient, @unchecked Sendable {
+      var tracked: [(String, [String: Any])] = []
+      func track(event: String, properties: [String: Any]) { tracked.append((event, properties)) }
+      func handlePush(_ userInfo: [AnyHashable: Any]) -> Bool { userInfo["aps"] != nil }
+    }
+    let client = Client()
+    let recorder = AnalyticsRecorder(client: client)
+    recorder.record(AnalyticsInput(id: "opened", properties: ["count": 2, "skipped": nil]))
+    recorder.record(AnalyticsInput(id: "opened"))
+    #expect(client.tracked.map(\.0) == ["opened", "opened"])
+    #expect(client.tracked[0].1["count"] as? Int == 2)
+    #expect(client.tracked[0].1.keys.sorted() == ["count"])
+    #expect(recorder.receivePush(["aps": ["alert": "hi"]]))
+    #expect(!recorder.receivePush([:]))
+    #expect(recorder.eventCounts() == ["opened": 2])
+  }
+
   @Test func notifications() {
     let client = NotificationsClientMock()
     let failures = Counter()
@@ -61,8 +79,9 @@ struct ClientsTests {
     notifications.notify(.string("hello"))
     notifications.notify(.closed(code: 1000, reason: "bye"))
     notifications.notify(.closed(code: 1001, reason: nil))
-    #expect(client.delivered == ["hello", "closed 1000 bye", "closed 1001 "])
-    #expect(client.deliveredCount == 3)
+    notifications.notify(.event(name: "page", metadata: ["b": "2", "a": "1"]))
+    #expect(client.delivered == ["hello", "closed 1000 bye", "closed 1001 ", "page [\"a=1\", \"b=2\"]"])
+    #expect(client.deliveredCount == 4)
   }
 
   @Test func downloadProgressAsync() async throws {

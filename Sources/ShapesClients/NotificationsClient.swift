@@ -25,6 +25,8 @@ public final class NotificationsClientMock: NotificationsClient, @unchecked Send
     switch message {
     case .string(let text): delivered.append(text)
     case .closed(let code, let reason): delivered.append("closed \(code) \(reason ?? "")")
+    case .event(let name, let metadata):
+      delivered.append("\(name) \((metadata ?? [:]).sorted { $0.key < $1.key }.map { "\($0)=\($1)" })")
     }
   }
 

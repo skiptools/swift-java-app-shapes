@@ -2,6 +2,9 @@ package com.example.shapes
 
 import com.example.shapes.clients.CatalogClient
 import com.example.shapes.clients.DownloadProgress
+import com.example.shapes.clients.AnalyticsClient
+import com.example.shapes.clients.AnalyticsInput
+import com.example.shapes.clients.AnalyticsRecorder
 import com.example.shapes.clients.LifecycleObserver
 import com.example.shapes.clients.LifecycleObserverFactory
 import com.example.shapes.clients.NotificationsClient
@@ -89,8 +92,48 @@ class ClientsTest {
         mock.notify_(Message.string("hi"))
         mock.notify_(Message.closed(1000, "bye"))
         mock.notify_(Message.closed(1001, null))
-        assertEquals(listOf("hi", "closed 1000 bye", "closed 1001 "), mock.delivered.toList())
-        assertEquals(3, mock.deliveredCount)
+        mock.notify_(Message.event("page", mapOf("b" to "2", "a" to "1")))
+        mock.notify_(Message.event("page", null))
+        assertEquals(
+            listOf("hi", "closed 1000 bye", "closed 1001 ", "page [\"a=1\", \"b=2\"]", "page []"),
+            mock.delivered.toList(),
+        )
+        assertEquals(5, mock.deliveredCount)
+    }
+
+    @Test
+    fun dictionariesAndAnyAreKotlinMaps() {
+        val tracked = mutableListOf<Pair<String, Map<String, Any>>>()
+        var pushed: Map<Any, Any>? = null
+        val client = object : AnalyticsClient {
+            override fun track(event: String, properties: Map<String, Any>) {
+                tracked += event to properties
+            }
+
+            override fun handlePush(userInfo: Map<Any, Any>): Boolean {
+                pushed = userInfo
+                return userInfo.containsKey("aps")
+            }
+        }
+        val recorder = AnalyticsRecorder.init(client)
+        val properties = mapOf("count" to 2L, "tags" to listOf("a", "b"), "nested" to mapOf("on" to true), "skipped" to null)
+        recorder.record(AnalyticsInput.init("opened", properties))
+        recorder.record(AnalyticsInput.init("opened"))
+        // `nil` values are dropped by the recorder; the rest come back as Kotlin values.
+        assertEquals(
+            listOf(
+                "opened" to mapOf("count" to 2L, "tags" to listOf("a", "b"), "nested" to mapOf("on" to true)),
+                "opened" to emptyMap(),
+            ),
+            tracked,
+        )
+        assertEquals(true, recorder.receivePush(mapOf("aps" to mapOf("alert" to "hi"))))
+        assertEquals(mapOf<Any, Any>("aps" to mapOf("alert" to "hi")), pushed)
+        assertEquals(mapOf("opened" to 2L), recorder.eventCounts())
+
+        // An optional dictionary of optional values: `null` for `nil`, at both levels.
+        assertEquals(mapOf("a" to "b", "n" to null), AnalyticsInput.init("x", mapOf("a" to "b", "n" to null)).properties)
+        assertNull(AnalyticsInput.init("y").properties)
     }
 
     @Test

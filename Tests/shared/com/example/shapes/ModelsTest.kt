@@ -89,11 +89,14 @@ class ModelsTest {
         fun describe(message: Message): String = when (val case = message.case) {
             is Message.Case.String -> case.arg0
             is Message.Case.Closed -> "closed ${case.code} ${case.reason ?: "-"}"
+            is Message.Case.Event -> "${case.name} ${case.metadata ?: "-"}"
         }
         assertEquals("hello", describe(Message.string("hello")))
         assertEquals("closed 1000 bye", describe(Message.closed(1000, "bye")))
         assertEquals("closed 1001 -", describe(Message.closed(1001, null)))
         assertEquals("closed 1000 bye", describe(Message.getGoodbye()))
+        assertEquals("page {k=v}", describe(Message.event("page", mapOf("k" to "v"))))
+        assertEquals("page -", describe(Message.event("page", null)))
     }
 
     @Test
