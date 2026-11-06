@@ -84,6 +84,14 @@ struct ClientsTests {
     #expect(client.deliveredCount == 4)
   }
 
+  @Test func authMonitor() {
+    let client = NotificationsClientMock()
+    let monitor = AuthMonitor(notifications: client)
+    client.failAuth()
+    client.failAuth()
+    #expect(monitor.failures == 2)
+  }
+
   @Test func downloadProgressAsync() async throws {
     let progress = DownloadProgress()
     async let completion: Void = progress.waitUntilComplete()

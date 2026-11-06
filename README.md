@@ -56,7 +56,7 @@ swift-java/              skiptools/swift-java at skip/integration (submodule)
 |---|---|---|
 | `ShapesUtil` | `all` | static helpers, constants inferred from literals and array literals, `@autoclosure` arguments, Java keywords as names, a method named like `Object.wait()`, platform-specific API |
 | `ShapesModels` | `annotated` | Codable entities with Foundation values, raw-value enums, enums with payloads (one carrying an `Error`, one whose case shadows a payload type and has an optional dictionary payload, one a closure), nested arrays, sets, optional labeled tuples, overloads that differ only in pointer types, clashing accessor names, a default-argument overload that would be ambiguous, a parameter named `result`, a `@MainActor` callback typealias |
-| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, one taking dictionaries of `Any`, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure, an extension of another module's type, dictionaries and sets of another module's types, Combine state, an `AsyncStream`, a long-running `async` function that stops when cancelled |
+| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, one taking dictionaries of `Any`, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure (Swift passes its closure to a Kotlin implementation), an extension of another module's type, dictionaries and sets of another module's types, Combine state, an `AsyncStream`, a long-running `async` function that stops when cancelled |
 | `ShapesDependencies` | `all` | a container of clients typed as another module's protocols, `@autoclosure @escaping` configuration returning another module's enum, app state, async functions taking entities |
 | `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, `async` callbacks (suspend lambdas in Kotlin), a closure returning an optional array of entities, a callback handed a Swift closure to call later |
 
@@ -243,6 +243,7 @@ package, and against the app it comes from (no new skipped declarations, javac o
 | 41 | `Self` results of structs, enums and classes | [`jextract-self-results`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-self-results) | upstream `main` |  |
 | 42 | Closure types keep their parameters' names; a closure implemented in Java can take a Swift closure | [`jextract-closure-closure-parameters`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-closure-parameters) | `skip/integration` |  |
 | 43 | `dictionariesAsJavaMaps`: dictionaries as `java.util.Map` copies and `Any` as `Object`, as Skip bridges them | [`jextract-dictionaries-as-maps`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-dictionaries-as-maps) | `skip/integration` |  |
+| 44 | Swift passes a Swift closure to a Kotlin implementation of a requirement taking one | [`jextract-closure-requirements`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-requirements) | `skip/integration` |  |
 
 `skip/integration` also has, beyond these branches (see [Gaps and limits](#gaps-and-limits)):
 - the change of [#938](https://github.com/swiftlang/swift-java/pull/938) (`@MainActor` isolation in synchronous thunks), closed upstream;
@@ -276,10 +277,6 @@ removing its annotation, which the build and the Kotlin tests then check.
 - Sets as parameters (`Shelf.init(id:books:tags:)`): Kotlin can't create a `SwiftSet`, so it can pass only a
   set Swift returned (the test marks it with `// Gap:`).
 
-**Exported, but not yet callable from Swift:** a requirement taking a closure, on a Kotlin implementation
-(`NotificationsClient.onAuthError`): Kotlin can implement it and call a Swift implementation, but Swift calling
-a Kotlin implementation stops with an error.
-
 **`kotlinOutput`, as prototyped:**
 - Enums keep their class and a sealed `getCase()` (`when (val case = message.case)`), rather than becoming
   the sealed type themselves (`when (message)`), which would make each case a subclass holding the Swift
@@ -295,6 +292,6 @@ a Kotlin implementation stops with an error.
 - Out of scope: Observation to Compose state (Skip's), and arrays as `List`s.
 
 **The path upstream:** a few changes aren't yet on a branch based on upstream `main`. `jextract-kotlin-output`,
-`jextract-closure-closure-parameters` and `jextract-dictionaries-as-maps` are based on `skip/integration`, the `Integration: …` commits combine several branches, and #938's change is
+`jextract-closure-closure-parameters`, `jextract-dictionaries-as-maps` and `jextract-closure-requirements` are based on `skip/integration`, the `Integration: …` commits combine several branches, and #938's change is
 closed upstream. Splitting them into branches like the others makes `skip/integration` exactly upstream plus
 the list above.

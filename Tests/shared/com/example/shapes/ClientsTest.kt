@@ -7,6 +7,7 @@ import com.example.shapes.clients.AnalyticsInput
 import com.example.shapes.clients.AnalyticsRecorder
 import com.example.shapes.clients.LifecycleObserver
 import com.example.shapes.clients.LifecycleObserverFactory
+import com.example.shapes.clients.AuthMonitor
 import com.example.shapes.clients.NotificationsClient
 import com.example.shapes.clients.NotificationsClientMock
 import com.example.shapes.clients.SearchClient
@@ -59,6 +60,23 @@ class ClientsTest {
 
         client.notify_(Message.string("hi"))
         assertEquals(listOf("hi"), mock.delivered.toList())
+    }
+
+    @Test
+    fun swiftClosureToAKotlinImplementation() {
+        val handlers = mutableListOf<NotificationsClient.onAuthError.handler>()
+        val client = object : NotificationsClient {
+            override fun onAuthError(handler: NotificationsClient.onAuthError.handler) {
+                handlers += handler
+            }
+
+            override fun notify_(message: Message) {}
+        }
+        val monitor = AuthMonitor.init(client)   // Swift passes its closure to Kotlin's onAuthError
+        assertEquals(1, handlers.size)
+        handlers.forEach { it.invoke() }
+        handlers.forEach { it.invoke() }
+        assertEquals(2, monitor.failures)
     }
 
     @Test

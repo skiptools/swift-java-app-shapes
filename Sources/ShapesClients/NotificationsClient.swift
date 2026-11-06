@@ -36,3 +36,13 @@ public final class NotificationsClientMock: NotificationsClient, @unchecked Send
 
   public var deliveredCount: Int64 { Int64(delivered.count) }
 }
+
+/// Hands the notifications client Kotlin implements a Swift closure, which Kotlin calls back.
+@JavaExport
+public final class AuthMonitor: @unchecked Sendable {
+  public private(set) var failures: Int64 = 0
+
+  public init(notifications: any NotificationsClient) {
+    notifications.onAuthError { [weak self] in self?.failures += 1 }
+  }
+}
