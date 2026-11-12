@@ -84,6 +84,19 @@ struct ClientsTests {
     #expect(client.deliveredCount == 4)
   }
 
+  @Test func deviceSession() async throws {
+    struct FixedDevice: DeviceClient {
+      func deviceId() -> String? { "d" }
+      func lastSeen() -> Int64? { nil }
+      func lastBook() -> Book? { nil }
+      func verify(code: String?) async throws -> Bool { code == "1" }
+    }
+    let session = DeviceSession(client: FixedDevice())
+    #expect(session.describe() == "d never no book")
+    #expect(try await session.verify(code: "1"))
+    #expect(try await !session.verify(code: nil))
+  }
+
   @Test func authMonitor() {
     let client = NotificationsClientMock()
     let monitor = AuthMonitor(notifications: client)

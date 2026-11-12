@@ -2,6 +2,11 @@ package com.example.shapes
 
 import com.example.shapes.clients.CatalogClient
 import com.example.shapes.clients.DownloadProgress
+import java.util.concurrent.CompletableFuture
+import org.swift.swiftkit.core.SwiftArena
+import com.example.shapes.clients.verify
+import com.example.shapes.clients.DeviceSession
+import com.example.shapes.clients.DeviceClient
 import com.example.shapes.clients.AnalyticsClient
 import com.example.shapes.clients.AnalyticsInput
 import com.example.shapes.clients.AnalyticsRecorder
@@ -23,6 +28,8 @@ import com.example.shapes.models.Shelf
 import com.example.shapes.models.ShelfID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -189,6 +196,32 @@ class ClientsTest {
         factory.observeOnce("a")
         factory.observeOnce("b")
         assertEquals(listOf("a", "b"), disposed)
+    }
+
+    @Test
+    fun optionalResultsAndAsyncRequirementsOfAKotlinImplementation() = runBlocking {
+        var device: String? = null
+        var seen: Long? = null
+        var book: Book? = null
+        val codes = mutableListOf<String?>()
+        val client = object : DeviceClient {
+            override fun deviceId(): String? = device
+            override fun lastSeen(): Long? = seen
+            override fun lastBook(swiftArena: SwiftArena): Book? = book
+            override fun verifyAsync(code: String?): CompletableFuture<Boolean> {
+                codes += code
+                return CompletableFuture.completedFuture(code == "1234")
+            }
+        }
+        val session = DeviceSession.init(client)
+        assertEquals("none never no book", session.describe())
+        device = "pixel"
+        seen = 42
+        book = books[0]
+        assertEquals("pixel 42 Cosmos", session.describe())
+        assertTrue(session.verify("1234"))
+        assertFalse(session.verify(null))
+        assertEquals(listOf("1234", null), codes)
     }
 
     @Test

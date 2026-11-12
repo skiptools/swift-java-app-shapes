@@ -56,7 +56,7 @@ swift-java/              skiptools/swift-java at skip/integration (submodule)
 |---|---|---|
 | `ShapesUtil` | `all` | static helpers, constants inferred from literals and array literals, `@autoclosure` arguments, Java keywords as names, a method named like `Object.wait()`, platform-specific API |
 | `ShapesModels` | `annotated` | Codable entities with Foundation values, raw-value enums, enums with payloads (one carrying an `Error`, one whose case shadows a payload type and has an optional dictionary payload, one a closure), nested arrays, sets, optional labeled tuples, overloads that differ only in pointer types, clashing accessor names, a default-argument overload that would be ambiguous, a parameter named `result`, a `@MainActor` callback typealias |
-| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, one taking dictionaries of `Any`, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure (Swift passes its closure to a Kotlin implementation), an extension of another module's type, dictionaries and sets of another module's types, Combine state, an `AsyncStream`, a long-running `async` function that stops when cancelled |
+| `ShapesClients` | `annotated` | client protocols used as bare existentials, a protocol Kotlin implements, one taking dictionaries of `Any`, returned by a Kotlin closure, protocol extensions implementing requirements and adding methods, mocks that rely on them, a requirement taking a closure (Swift passes its closure to a Kotlin implementation), requirements returning optionals and an `async` one taking an optional, an extension of another module's type, dictionaries and sets of another module's types, Combine state, an `AsyncStream`, a long-running `async` function that stops when cancelled |
 | `ShapesDependencies` | `all` | a container of clients typed as another module's protocols, `@autoclosure @escaping` configuration returning another module's enum, app state, async functions taking entities |
 | `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, `async` callbacks (suspend lambdas in Kotlin), a closure returning an optional array of entities, a callback handed a Swift closure to call later |
 
@@ -196,7 +196,8 @@ book.shareText()
 `skip/integration` is upstream `main` plus the branches below, merged in this order. Each is one change, with
 its tests, on [piercifani/swift-java](https://github.com/piercifani/swift-java), and its link shows its diff
 against upstream. Four are open upstream PRs and one is merged; the others aren't opened yet. Each was checked
-against this package, and against the app it comes from (no new skipped declarations or javac errors).
+against this package, and against the app it comes from: no new skipped declarations, javac or Swift errors,
+with the app's Swift build compiling every module with the generated bindings.
 
 Upstream moved swift-java's Swift analysis (`SwiftExtract`) to
 [swift-binding-generator-core](https://github.com/swiftlang/swift-binding-generator-core)
@@ -253,6 +254,7 @@ them, and swift-java's `skip/integration` depends on it.
 | 42 | Closure types keep their parameters' names; a closure implemented in Java can take a Swift closure | [`jextract-closure-closure-parameters`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-closure-parameters), [core](https://github.com/swiftlang/swift-binding-generator-core/compare/main...piercifani:swift-binding-generator-core:jextract-closure-closure-parameters) | `skip/integration` |  |
 | 43 | `dictionariesAsJavaMaps`: dictionaries as `java.util.Map` copies and `Any` as `Object`, as Skip bridges them | [`jextract-dictionaries-as-maps`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-dictionaries-as-maps), [core](https://github.com/swiftlang/swift-binding-generator-core/compare/main...piercifani:swift-binding-generator-core:jextract-dictionaries-as-maps) | `skip/integration` |  |
 | 44 | Swift passes a Swift closure to a Kotlin implementation of a requirement taking one | [`jextract-closure-requirements`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-requirements), [core](https://github.com/swiftlang/swift-binding-generator-core/compare/main...piercifani:swift-binding-generator-core:jextract-closure-requirements) | `skip/integration` |  |
+| 45 | Kotlin implementations of protocols take and return optionals and Foundation values as their Java interface declares them; Kotlin's `suspend` requirements are called by their Java name | [`jextract-protocol-optional-results`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-protocol-optional-results) | `skip/integration` |  |
 
 `skip/integration` also has, beyond these branches (see [Gaps and limits](#gaps-and-limits)):
 - the change of [#938](https://github.com/swiftlang/swift-java/pull/938) (`@MainActor` isolation in synchronous thunks), closed upstream;
@@ -300,13 +302,7 @@ removing its annotation, which the build and the Kotlin tests then check.
   a function with trailing defaulted closures gets changes when it gains one (`ShelfViewModel.Callbacks.init`).
 - Out of scope: Observation to Compose state (Skip's), and arrays as `List`s.
 
-**The app's Swift build:** with the generated bindings it doesn't compile yet. A Kotlin-implemented protocol
-requirement with an optional `String` result, or an `async` one with an optional `String` argument, gets a
-`@JavaMethod` binding that doesn't type-check (`String?` isn't a `JavaValue`) with
-`"javaCallbacksBindings": "jextract"`. Modules depending on the failing one aren't compiled, so they may have
-more. This package doesn't have the shape yet.
-
 **The path upstream:** a few changes aren't yet on a branch based on upstream `main`. `jextract-kotlin-output`,
-`jextract-closure-closure-parameters`, `jextract-dictionaries-as-maps` and `jextract-closure-requirements` are based on `skip/integration`, the `Integration: …` commits combine several branches, and #938's change is
+`jextract-closure-closure-parameters`, `jextract-dictionaries-as-maps`, `jextract-closure-requirements` and `jextract-protocol-optional-results` are based on `skip/integration`, the `Integration: …` commits combine several branches, and #938's change is
 closed upstream. Splitting them into branches like the others makes `skip/integration` exactly upstream plus
 the list above.
