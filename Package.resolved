@@ -1,5 +1,5 @@
 {
-  "originHash" : "cfd606fb0e945f0fced4b0b1619591636c109dae7d2ae158e3ad652d46b97528",
+  "originHash" : "733d98037b55ebe610bd593aee50dda3cd3b2c56871a7e565f37510cd133fe4c",
   "pins" : [
     {
       "identity" : "opencombine",
@@ -20,12 +20,21 @@
       }
     },
     {
+      "identity" : "swift-binding-generator-core",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/skiptools/swift-binding-generator-core",
+      "state" : {
+        "branch" : "skip/integration",
+        "revision" : "9435b9f87c5d7b0d6d200af335da3b5ef5a4ce74"
+      }
+    },
+    {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "f96b909e1a9e469620bc5037c1e24e00153f376f",
-        "version" : "1.7.5"
+        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+        "version" : "1.6.0"
       }
     },
     {
