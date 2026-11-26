@@ -13,12 +13,12 @@ import SwiftJavaAnnotations
 public final class ShelfViewModel {
   @JavaExport
   public struct Callbacks: @unchecked Sendable {
-    @JavaExport(false) public let onOpen: @MainActor (Book) -> Void
-    @JavaExport(false) public let onSelect: @MainActor ([Book]) -> Void
-    @JavaExport(false) public let onShareLinks: @MainActor ([URL]) -> Void
-    @JavaExport(false) public let onVerify: @MainActor (String?, Int64?) -> Void
-    @JavaExport(false) public let onShare: @MainActor (ShelfViewModel, Genre) async -> Void
-    @JavaExport(false) public let onSetIcon: @MainActor (String?) async -> Void
+    @JavaIgnore public let onOpen: @MainActor (Book) -> Void
+    @JavaIgnore public let onSelect: @MainActor ([Book]) -> Void
+    @JavaIgnore public let onShareLinks: @MainActor ([URL]) -> Void
+    @JavaIgnore public let onVerify: @MainActor (String?, Int64?) -> Void
+    @JavaIgnore public let onShare: @MainActor (ShelfViewModel, Genre) async -> Void
+    @JavaIgnore public let onSetIcon: @MainActor (String?) async -> Void
 
     public init(
       onOpen: @escaping @MainActor (Book) -> Void = { _ in },
@@ -102,7 +102,7 @@ public final class ShelfViewModel {
   #if os(Android)
     /// Shape: Android-only API on a view model.
     /// Gap: see `Platform.androidOnly()`.
-    @JavaExport(false)
+    @JavaIgnore
     public func androidBackPressed() {}
   #endif
 }

@@ -13,9 +13,9 @@ public final class LoginViewModel {
   /// Shape: callbacks typed with another module's `@MainActor` typealias, with defaults.
   @JavaExport
   public struct Callbacks: @unchecked Sendable {
-    @JavaExport(false)
+    @JavaIgnore
     public let didLogin: VoidCallback
-    @JavaExport(false)
+    @JavaIgnore
     public let didCancel: VoidCallback
 
     public init(didLogin: @escaping VoidCallback = {}, didCancel: @escaping VoidCallback = {}) {

@@ -61,7 +61,7 @@ swift-java/              skiptools/swift-java at skip/integration (submodule)
 | `ShapesViewModels` | `annotated` | `@MainActor` `@Observable` view models, callbacks typed with another module's `@MainActor` typealias, callbacks taking entities, arrays of entities, `[URL]`, optional strings and numbers, `async` callbacks (suspend lambdas in Kotlin), a closure returning an optional array of entities, a callback handed a Swift closure to call later |
 
 Every module sets `failOnSkippedDeclarations`, so building with jextract fails when it can't handle
-something. Shapes it doesn't handle yet are marked `@JavaExport(false)` with a `// Gap:` comment
+something. Shapes it doesn't handle yet are marked `@JavaIgnore` with a `// Gap:` comment
 ([Gaps and limits](#gaps-and-limits)).
 
 ## Running it
@@ -227,7 +227,7 @@ them, and swift-java's `skip/integration` depends on it.
 | 15 | Non-escaping closures taking or returning jextracted types | [`jextract-closure-struct-arguments`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-struct-arguments), [core](https://github.com/swiftlang/swift-binding-generator-core/compare/main...piercifani:swift-binding-generator-core:jextract-closure-struct-arguments) | branch 1 |  |
 | 16 | Java enum constants keep the Swift case names | [`jextract-enum-swift-case-names`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-enum-swift-case-names) | branch 12 |  |
 | 17 | `nullableAnnotation` and `nonNullAnnotation`, for Kotlin's nullability (arrays stay platform types) | [`jextract-nullability-annotations`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-nullability-annotations) | branch 14 |  |
-| 18 | `@JavaExport(false)` and `exportMode`; prefix and postfix operators skipped | [`jextract-export-control`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-export-control), [core](https://github.com/swiftlang/swift-binding-generator-core/compare/main...piercifani:swift-binding-generator-core:jextract-export-control) | upstream `main` | [#950](https://github.com/swiftlang/swift-java/pull/950), [#951](https://github.com/swiftlang/swift-java/pull/951) |
+| 18 | `@JavaIgnore` and `exportMode` (prefix and postfix operators, once skipped here, are supported upstream since [#966](https://github.com/swiftlang/swift-java/pull/966)) | [`jextract-export-control`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-export-control), [core](https://github.com/swiftlang/swift-binding-generator-core/pull/4), merged | upstream `main` | [#951](https://github.com/swiftlang/swift-java/pull/951) |
 | 19 | `foundationTypesAsJavaTypes`: Foundation values as standard Java types | [`jextract-foundation-java-types`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-foundation-java-types), [core](https://github.com/swiftlang/swift-binding-generator-core/compare/main...piercifani:swift-binding-generator-core:jextract-foundation-java-types) | upstream `main` | [#952](https://github.com/swiftlang/swift-java/pull/952) |
 | 20 | `closureMethodName`: the method name of closure interfaces | [`jextract-closure-method-name`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-closure-method-name) | upstream `main` | [#953](https://github.com/swiftlang/swift-java/pull/953) |
 | 21 | Swift names that are Java keywords | [`jextract-java-identifiers`](https://github.com/swiftlang/swift-java/compare/main...piercifani:swift-java:jextract-java-identifiers) | upstream `main` | [#954](https://github.com/swiftlang/swift-java/pull/954), merged |
@@ -280,7 +280,7 @@ These are what this repository had to set up itself, and what an app would too:
 
 ## Gaps and limits
 
-**What jextract doesn't handle yet**, marked `@JavaExport(false)` with a `// Gap:` comment: fixing one means
+**What jextract doesn't handle yet**, marked `@JavaIgnore` with a `// Gap:` comment: fixing one means
 removing its annotation, which the build and the Kotlin tests then check.
 - `#if`: without a static build configuration jextract treats every platform as active, so a macOS build
   gets thunks for `#if os(Android)` API (`Platform.androidOnly()`, `ShelfViewModel.androidBackPressed()`),

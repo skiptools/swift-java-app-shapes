@@ -9,7 +9,7 @@ import PackageDescription
 //
 // Every module uses `failOnSkippedDeclarations`: building this package checks that jextract handles
 // all of it, and that the Java and Swift it generates compile. Shapes jextract doesn't handle yet are
-// marked `@JavaExport(false)` with a `// Gap:` comment.
+// marked `@JavaIgnore` with a `// Gap:` comment.
 
 // Apple builds use only the JNI-free `@JavaExport` markers. Android (and the Gradle build that runs the
 // Kotlin tests) sets `SWIFT_JAVA_BUILD`, which adds swift-java and the jextract plugin, as

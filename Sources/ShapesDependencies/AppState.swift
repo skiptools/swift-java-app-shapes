@@ -5,7 +5,7 @@ import ShapesUtil
 import SwiftJavaAnnotations
 
 /// Shape: a generic wrapper for persisted values, used only from Swift.
-@JavaExport(false)
+@JavaIgnore
 public final class StateValue<Value: Sendable>: @unchecked Sendable {
   public var value: Value
 
@@ -16,7 +16,7 @@ public final class StateValue<Value: Sendable>: @unchecked Sendable {
 
 /// Shape: app state with values Java reads, and one it doesn't.
 public final class AppState: @unchecked Sendable {
-  @JavaExport(false)
+  @JavaIgnore
   public let launchCount = StateValue<Int64>(0)
   public private(set) var shelves: [ShelfID: Shelf] = [:]
   public private(set) var reader: Reader?

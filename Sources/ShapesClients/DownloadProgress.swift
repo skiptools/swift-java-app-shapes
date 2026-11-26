@@ -17,7 +17,7 @@ public final class DownloadProgress: @unchecked Sendable {
 
   public init() {}
 
-  @JavaExport(false)
+  @JavaIgnore
   public var publisher: AnyPublisher<Double, Never> {
     subject.eraseToAnyPublisher()
   }

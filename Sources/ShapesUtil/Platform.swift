@@ -14,7 +14,7 @@ public enum Platform {
   #if os(Android)
     /// Gap: jextract extracts every `#if` branch unless given a static build configuration, and the
     /// thunks don't keep the condition, so a macOS build sees a thunk for Android-only API.
-    @JavaExport(false)
+    @JavaIgnore
     public static func androidOnly() -> String {
       "android"
     }

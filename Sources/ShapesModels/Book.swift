@@ -11,7 +11,7 @@ public struct Book: Codable, Hashable, Sendable, Identifiable {
   public let genre: Genre
   public let coverURL: URL?
   public let published: Date
-  @JavaExport(false)
+  @JavaIgnore
   public let rawPayload: Data?
 
   public init(
@@ -34,7 +34,7 @@ public struct Book: Codable, Hashable, Sendable, Identifiable {
   }
 
   /// Shape: Codable plumbing, which Kotlin doesn't need.
-  @JavaExport(false)
+  @JavaIgnore
   public static func decode(_ data: Data) throws -> Book {
     try JSONDecoder().decode(Book.self, from: data)
   }

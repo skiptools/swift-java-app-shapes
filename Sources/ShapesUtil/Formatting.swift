@@ -13,7 +13,7 @@ public enum Formatting {
   }
 
   /// Shape: a Foundation formatter used from Swift only. Public, but not for Java.
-  @JavaExport(false)
+  @JavaIgnore
   public static func dateFormatter() -> DateFormatter {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
